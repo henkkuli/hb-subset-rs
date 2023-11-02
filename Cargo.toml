@@ -3,6 +3,12 @@ name = "hb-subset"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+description = "A wrapper for HarfBuzz font subsetting API "
+homepage = "https://github.com/henkkuli/hb-subset-rs"
+repository = "https://github.com/henkkuli/hb-subset-rs"
+readme = "README.md"
+keywords = ["fonts", "subsetting"]
+categories = ["api-bindings", "encoding"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
