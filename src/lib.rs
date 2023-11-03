@@ -12,7 +12,7 @@
 //! >
 //! > Fonts with graphite or AAT tables may still be subsetted but will likely need to use the retain glyph ids option
 //! > and configure the subset to pass through the layout tables untouched.
-//! 
+//!
 //! # Usage
 //! The simplest way to construct a subset of a font is to use [`subset`] function:
 //! ```no_run
@@ -21,22 +21,22 @@
 //! let subset_font = hb_subset::subset(&font, "abc".chars()).unwrap();
 //! fs::write("fonts/subset.ttf", subset_font).unwrap();
 //! ```
-//! 
+//!
 //! To get more control over how the font is subset and what gets included, you can use the lower level API directly:
 //! ```rust
 //! # use hb_subset::*;
 //! // Load font directly from a file
 //! let font = Blob::from_file("fonts/NotoSans/full/variable/NotoSans[wdth,wght].ttf").unwrap();
 //! let font = FontFace::new(font).unwrap();
-//! 
+//!
 //! // Construct a subset manually and include only some of the letters
 //! let mut subset = SubsetInput::new().unwrap();
 //! subset.unicode_set().insert('f' as u32);
 //! subset.unicode_set().insert('i' as u32);
-//! 
+//!
 //! // Subset the font using just-constructed subset input
 //! let new_font = subset.subset_font(&font).unwrap();
-//! 
+//!
 //! // Extract the raw font and write to an output file
 //! std::fs::write("out.ttf", &*new_font.underlying_blob()).unwrap();
 //! ```
@@ -47,7 +47,6 @@ use std::{
     ffi::{c_char, CString},
     hash::Hash,
     marker::PhantomData,
-    mem::ManuallyDrop,
     ops::{Deref, DerefMut, RangeBounds},
     os::unix::prelude::OsStringExt,
     path::Path,
@@ -79,6 +78,21 @@ pub enum Error {
 /// Blob handles lifecycle management of data while it is passed between client and HarfBuzz. Blobs are primarily used
 /// to create font faces, but also to access font face tables, as well as pass around other binary data.
 pub struct Blob<'a>(*mut sys::hb_blob_t, PhantomData<&'a [u8]>);
+
+impl Blob<'static> {
+    /// Creates a new blob containing the data from the specified binary font file.
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let path = path.as_ref();
+        // TODO: Try to make more succinct
+        let path = CString::new(path.as_os_str().to_os_string().into_vec()).unwrap();
+
+        let blob = unsafe { sys::hb_blob_create_from_file_or_fail(path.as_ptr()) };
+        if blob.is_null() {
+            return Err(Error::AllocationError);
+        }
+        Ok(Self(blob, PhantomData))
+    }
+}
 
 impl<'a> Blob<'a> {
     /// Creates a new blob object by wrapping a slice.
@@ -112,14 +126,27 @@ impl<'a> Blob<'a> {
     }
 
     /// Converts the blob into raw [`sys::hb_blob_t`] object.
+    ///
+    /// This method transfers the ownership of the blob to the caller. It is up to the caller to call
+    /// [`sys::hb_blob_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`Blob`].
     pub fn into_raw(self) -> *mut sys::hb_blob_t {
+        let ptr = self.0;
+        std::mem::forget(self);
+        ptr
+    }
+
+    /// Exposes the raw inner pointer without transferring the ownership.
+    ///
+    /// Unlike [`Self::into_raw`], this method does not transfer the ownership of the pointer to the caller.
+    pub fn as_raw(&self) -> *mut sys::hb_blob_t {
         self.0
     }
 
     /// Constructs a blob from raw [`sys::hb_blob_t`] object.
     ///
     /// # Safety
-    /// The given `blob` pointer must either be constructed by some Harfbuzz function, or be returned from [`Self::into_raw`].
+    /// The given `blob` pointer must either be constructed by some Harfbuzz function, or be returned from
+    /// [`Self::into_raw`].
     pub unsafe fn from_raw(blob: *mut sys::hb_blob_t) -> Self {
         Self(blob, PhantomData)
     }
@@ -136,21 +163,6 @@ impl Deref for Blob<'_> {
             return &[];
         }
         unsafe { slice::from_raw_parts(data, len as usize) }
-    }
-}
-
-impl Blob<'static> {
-    /// Creates a new blob containing the data from the specified binary font file.
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let path = path.as_ref();
-        // TODO: Try to make more succinct
-        let path = CString::new(path.as_os_str().to_os_string().into_vec()).unwrap();
-
-        let blob = unsafe { sys::hb_blob_create_from_file_or_fail(path.as_ptr()) };
-        if blob.is_null() {
-            return Err(Error::AllocationError);
-        }
-        Ok(Self(blob, PhantomData))
     }
 }
 
@@ -201,25 +213,41 @@ impl<'a> FontFace<'a> {
     ///
     /// Returns an empty blob if referencing face data is not possible.
     pub fn underlying_blob(&self) -> Blob<'_> {
-        Blob(unsafe { sys::hb_face_reference_blob(self.0) }, PhantomData)
+        Blob(
+            unsafe { sys::hb_face_reference_blob(self.as_raw()) },
+            PhantomData,
+        )
     }
 
     /// Collects all of the Unicode characters covered by the font face.
     pub fn collect_unicodes(&self) -> Result<Set, Error> {
         let set = Set::new()?;
-        unsafe { sys::hb_face_collect_unicodes(self.0, set.0) };
+        unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)
     }
 
     /// Converts the font face into raw [`sys::hb_face_t`] object.
+    ///
+    /// This method transfers the ownership of the font face to the caller. It is up to the caller to call
+    /// [`sys::hb_face_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`FontFace`].
     pub fn into_raw(self) -> *mut sys::hb_face_t {
+        let ptr = self.0;
+        std::mem::forget(self);
+        ptr
+    }
+
+    /// Exposes the raw inner pointer without transferring the ownership.
+    ///
+    /// Unlike [`Self::into_raw`], this method does not transfer the ownership of the pointer to the caller.
+    pub fn as_raw(&self) -> *mut sys::hb_face_t {
         self.0
     }
 
     /// Constructs a font face from raw [`sys::hb_face_t`] object.
     ///
     /// # Safety
-    /// The given `font_face` pointer must either be constructed by some Harfbuzz function, or be returned from [`Self::into_raw`].
+    /// The given `font_face` pointer must either be constructed by some Harfbuzz function, or be returned from
+    /// [`Self::into_raw`].
     pub unsafe fn from_raw(font_face: *mut sys::hb_face_t) -> Self {
         Self(font_face, PhantomData)
     }
@@ -266,18 +294,18 @@ impl SubsetInput {
 
     /// Gets the set of Unicode code points to retain, the caller should modify the set as needed.
     pub fn unicode_set(&mut self) -> SetMutRef<'_> {
-        SetMutRef(
-            ManuallyDrop::new(Set(unsafe { sys::hb_subset_input_unicode_set(self.0) })),
+        SetMutRef(Set(
+            InnerSet(unsafe { sys::hb_set_reference(sys::hb_subset_input_unicode_set(self.0)) }),
             PhantomData,
-        )
+        ))
     }
 
     /// Gets the set of glyph IDs to retain, the caller should modify the set as needed.
     pub fn glyph_set(&mut self) -> SetMutRef<'_> {
-        SetMutRef(
-            ManuallyDrop::new(Set(unsafe { sys::hb_subset_input_glyph_set(self.0) })),
+        SetMutRef(Set(
+            InnerSet(unsafe { sys::hb_set_reference(sys::hb_subset_input_glyph_set(self.0)) }),
             PhantomData,
-        )
+        ))
     }
 
     /// Subsets a font according to provided input.
@@ -287,6 +315,32 @@ impl SubsetInput {
             return Err(Error::SubsetError);
         }
         Ok(FontFace(face, PhantomData))
+    }
+
+    /// Converts the subset input into raw [`sys::hb_subset_input_t`] object.
+    ///
+    /// This method transfers the ownership of the subset input to the caller. It is up to the caller to call
+    /// [`sys::hb_blob_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`SubsetInput`].
+    pub fn into_raw(self) -> *mut sys::hb_subset_input_t {
+        let ptr = self.0;
+        std::mem::forget(self);
+        ptr
+    }
+
+    /// Exposes the raw inner pointer without transferring the ownership.
+    ///
+    /// Unlike [`Self::into_raw`], this method does not transfer the ownership of the pointer to the caller.
+    pub fn as_raw(&self) -> *mut sys::hb_subset_input_t {
+        self.0
+    }
+
+    /// Constructs a subset input from raw [`sys::hb_subset_input_t`] object.
+    ///
+    /// # Safety
+    /// The given `subset` pointer must either be constructed by some Harfbuzz function, or be returned from
+    /// [`Self::into_raw`].
+    pub unsafe fn from_raw(subset: *mut sys::hb_subset_input_t) -> Self {
+        Self(subset)
     }
 }
 
@@ -305,46 +359,48 @@ impl Drop for SubsetInput {
 /// Set objects represent a mathematical set of integer values.
 ///
 /// Sets are used in non-shaping APIs to query certain sets of characters or glyphs, or other integer values.
-pub struct Set(*mut sys::hb_set_t);
+pub struct Set<'a>(InnerSet, PhantomData<&'a ()>);
 
-impl Set {
+impl Set<'static> {
     /// Creates a new, initially empty set.
     fn new() -> Result<Self, Error> {
         let set = unsafe { sys::hb_set_create() };
         if set.is_null() {
             return Err(Error::AllocationError);
         }
-        Ok(Self(set))
+        Ok(Self(InnerSet(set), PhantomData))
     }
+}
 
+impl<'a> Set<'a> {
     /// Tests whether a set is empty (contains no elements)
     pub fn is_empty(&self) -> bool {
-        (unsafe { sys::hb_set_is_empty(self.0) }) != 0
+        (unsafe { sys::hb_set_is_empty(self.as_raw()) }) != 0
     }
 
     /// Returns the number of elements in the set.
     pub fn len(&self) -> usize {
-        (unsafe { sys::hb_set_get_population(self.0) }) as usize
+        (unsafe { sys::hb_set_get_population(self.as_raw()) }) as usize
     }
 
     /// Clears out the contents of a set.
     pub fn clear(&mut self) {
-        unsafe { sys::hb_set_clear(self.0) }
+        unsafe { sys::hb_set_clear(self.as_raw()) }
     }
 
     /// Tests whether a value belongs to set.
     pub fn contains(&self, value: u32) -> bool {
-        (unsafe { sys::hb_set_has(self.0, value) }) != 0
+        (unsafe { sys::hb_set_has(self.as_raw(), value) }) != 0
     }
 
     /// Inserts a value to set.
     pub fn insert(&mut self, value: u32) {
-        unsafe { sys::hb_set_add(self.0, value) }
+        unsafe { sys::hb_set_add(self.as_raw(), value) }
     }
 
     /// Removes a value from set.
     pub fn remove(&mut self, value: u32) {
-        unsafe { sys::hb_set_del(self.0, value) }
+        unsafe { sys::hb_set_del(self.as_raw(), value) }
     }
 
     /// Converts a range to inclusive bounds.
@@ -382,7 +438,7 @@ impl Set {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
         };
-        unsafe { sys::hb_set_add_range(self.0, lower, upper) }
+        unsafe { sys::hb_set_add_range(self.as_raw(), lower, upper) }
     }
 
     /// Removes a range of values from set.
@@ -392,27 +448,67 @@ impl Set {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
         };
-        unsafe { sys::hb_set_add_range(self.0, lower, upper) }
+        unsafe { sys::hb_set_add_range(self.as_raw(), lower, upper) }
+    }
+
+    /// Converts the set into raw [`sys::hb_set_t`] object.
+    ///
+    /// This method transfers the ownership of the set to the caller. It is up to the caller to call
+    /// [`sys::hb_set_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`Set`].
+    pub fn into_raw(self) -> *mut sys::hb_set_t {
+        let ptr = self.0 .0;
+        std::mem::forget(self);
+        ptr
+    }
+
+    /// Exposes the raw inner pointer without transferring the ownership.
+    ///
+    /// Unlike [`Self::into_raw`], this method does not transfer the ownership of the pointer to the caller.
+    pub fn as_raw(&self) -> *mut sys::hb_set_t {
+        self.0 .0
+    }
+
+    /// Constructs a set from raw [`sys::hb_set_t`] object.
+    ///
+    /// # Safety
+    /// The given `set` pointer must either be constructed by some Harfbuzz function, or be returned from
+    /// [`Self::into_raw`].
+    pub unsafe fn from_raw(set: *mut sys::hb_set_t) -> Self {
+        Self(InnerSet(set), PhantomData)
     }
 }
 
-impl Drop for Set {
+impl<'a> Hash for Set<'a> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe { sys::hb_set_hash(self.as_raw()) }.hash(state);
+    }
+}
+
+/// Implementation detail of Set to hide source reference from drop check.
+/// 
+/// If the pointer was directly contained in [`Set`] with `Drop` implemented, the following code would not compile:
+/// ```rust
+/// # use hb_subset::*;
+/// let mut subset = SubsetInput::new().unwrap();
+/// let mut unicode_set = subset.unicode_set();
+/// // drop(unicode_set);                               // This needs to be called to delete unicode_set,
+/// # let font = FontFace::new(Blob::from_bytes(&[]).unwrap()).unwrap();
+/// let new_font = subset.subset_font(&font).unwrap();  // otherwise this line would not compile as unicode_set is already
+///                                                     // holding a mutable reference to subset.
+/// ```
+struct InnerSet(*mut sys::hb_set_t);
+
+impl Drop for InnerSet {
     fn drop(&mut self) {
         unsafe { sys::hb_set_destroy(self.0) }
     }
 }
 
-impl Hash for Set {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        unsafe { sys::hb_set_hash(self.0) }.hash(state);
-    }
-}
-
 /// A wrapper for a mutable reference to a [`Set`].
-pub struct SetMutRef<'a>(ManuallyDrop<Set>, PhantomData<&'a ()>);
+pub struct SetMutRef<'a>(Set<'a>);
 
 impl<'a> Deref for SetMutRef<'a> {
-    type Target = Set;
+    type Target = Set<'a>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
