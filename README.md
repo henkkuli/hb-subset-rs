@@ -1,4 +1,6 @@
 # A Rust wrapper for HarfBuzz subsetting API
+[![crates.io](https://img.shields.io/crates/v/hb-subset)](https://crates.io/crates/hb-subset)
+[![docs.rs](https://img.shields.io/docsrs/hb-subset)](https://docs.rs/hb-subset/)
 
 Subsetting is the process of taking a font and constructing a new, smaller font, by including parts of the font that are necessary for the situation. For example, many modern fonts, like [Noto](https://fonts.google.com/noto) include thousands of glyps, out of which only a couple of dozen or hundred are needed at any given time.
 
