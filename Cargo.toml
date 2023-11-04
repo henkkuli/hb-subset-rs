@@ -10,10 +10,18 @@ readme = "README.md"
 keywords = ["fonts", "subsetting"]
 categories = ["api-bindings", "encoding"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = ["harfbuzz/", "!harfbuzz/src", "!harfbuzz/COPYING"]
 
 [dependencies]
 thiserror = "1.0.50"
 
 [build-dependencies]
 bindgen = "0.69.1"
+cc = "1.0.83"
+pkg-config = "0.3.27"
+
+[features]
+bundled = []
+
+[package.metadata.docs.rs]
+features = ["bundled"]

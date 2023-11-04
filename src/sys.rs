@@ -6,3 +6,16 @@
 #![allow(non_upper_case_globals)]
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_version() {
+        assert!(
+            unsafe { hb_version_atleast(7, 0, 0) } != 0,
+            "The minimum supported version of HarfBuzz is 7.0.0"
+        );
+    }
+}

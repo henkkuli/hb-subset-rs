@@ -2,8 +2,28 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    println!("cargo:rustc-link-lib=harfbuzz");
-    println!("cargo:rustc-link-lib=harfbuzz-subset");
+    // First ensure that appropriate version of HarfBuzz exists
+    if cfg!(feature = "bundled") {
+        build_harfbuzz();
+    } else {
+        pkg_config::probe_library("harfbuzz-subset").unwrap();
+    }
+    // Then build the sys bindings
+    build_bindings();
+}
+
+fn build_harfbuzz() {
+    cc::Build::new()
+        .cpp(true)
+        .flag("-std=c++11")
+        .warnings(false)
+        .file("harfbuzz/src/harfbuzz-subset.cc")
+        .compile("embedded-harfbuzz-subset");
+
+    println!("cargo:rerun-if-changed=harfbuzz/src");
+}
+
+fn build_bindings() {
     println!("cargo:rerun-if-changed=wrapper.h");
 
     let bindings = bindgen::Builder::default()
