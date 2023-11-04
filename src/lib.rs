@@ -47,7 +47,7 @@ use std::{
     ffi::{c_char, CString},
     hash::Hash,
     marker::PhantomData,
-    ops::{Deref, DerefMut, RangeBounds},
+    ops::{Deref, RangeBounds},
     os::unix::prelude::OsStringExt,
     path::Path,
     ptr::null_mut,
