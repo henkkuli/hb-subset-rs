@@ -293,19 +293,19 @@ impl SubsetInput {
     }
 
     /// Gets the set of Unicode code points to retain, the caller should modify the set as needed.
-    pub fn unicode_set(&mut self) -> SetMutRef<'_> {
-        SetMutRef(Set(
+    pub fn unicode_set(&mut self) -> Set<'_> {
+        Set(
             InnerSet(unsafe { sys::hb_set_reference(sys::hb_subset_input_unicode_set(self.0)) }),
             PhantomData,
-        ))
+        )
     }
 
     /// Gets the set of glyph IDs to retain, the caller should modify the set as needed.
-    pub fn glyph_set(&mut self) -> SetMutRef<'_> {
-        SetMutRef(Set(
+    pub fn glyph_set(&mut self) -> Set<'_> {
+        Set(
             InnerSet(unsafe { sys::hb_set_reference(sys::hb_subset_input_glyph_set(self.0)) }),
             PhantomData,
-        ))
+        )
     }
 
     /// Subsets a font according to provided input.
@@ -485,7 +485,7 @@ impl<'a> Hash for Set<'a> {
 }
 
 /// Implementation detail of Set to hide source reference from drop check.
-/// 
+///
 /// If the pointer was directly contained in [`Set`] with `Drop` implemented, the following code would not compile:
 /// ```rust
 /// # use hb_subset::*;
@@ -501,23 +501,6 @@ struct InnerSet(*mut sys::hb_set_t);
 impl Drop for InnerSet {
     fn drop(&mut self) {
         unsafe { sys::hb_set_destroy(self.0) }
-    }
-}
-
-/// A wrapper for a mutable reference to a [`Set`].
-pub struct SetMutRef<'a>(Set<'a>);
-
-impl<'a> Deref for SetMutRef<'a> {
-    type Target = Set<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'a> DerefMut for SetMutRef<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 
