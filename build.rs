@@ -3,16 +3,18 @@ use std::path::PathBuf;
 
 fn main() {
     // First ensure that appropriate version of HarfBuzz exists
-    if cfg!(feature = "bundled") {
-        build_harfbuzz();
+    let include_paths = if cfg!(feature = "bundled") {
+        build_harfbuzz()
     } else {
-        pkg_config::probe_library("harfbuzz-subset").unwrap();
-    }
+        pkg_config::probe_library("harfbuzz-subset")
+            .unwrap()
+            .include_paths
+    };
     // Then build the sys bindings
-    build_bindings();
+    build_bindings(include_paths);
 }
 
-fn build_harfbuzz() {
+fn build_harfbuzz() -> Vec<PathBuf> {
     cc::Build::new()
         .cpp(true)
         .flag("-std=c++11")
@@ -21,12 +23,19 @@ fn build_harfbuzz() {
         .compile("embedded-harfbuzz-subset");
 
     println!("cargo:rerun-if-changed=harfbuzz/src");
+
+    vec!["harfbuzz/src/".into()]
 }
 
-fn build_bindings() {
+fn build_bindings(include_paths: Vec<PathBuf>) {
     println!("cargo:rerun-if-changed=wrapper.h");
 
     let bindings = bindgen::Builder::default()
+        .clang_args(
+            include_paths
+                .into_iter()
+                .map(|path| format!("-I{}", path.display())),
+        )
         .header("wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .allowlist_item("hb_.*")

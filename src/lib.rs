@@ -17,7 +17,7 @@
 //! The simplest way to construct a subset of a font is to use [`subset`] function:
 //! ```no_run
 //! # use std::fs;
-//! let font = fs::read("fonts/NotoSans/full/variable/NotoSans[wdth,wght].ttf").unwrap();
+//! let font = fs::read("tests/fonts/NotoSans.ttf").unwrap();
 //! let subset_font = hb_subset::subset(&font, "abc".chars()).unwrap();
 //! fs::write("fonts/subset.ttf", subset_font).unwrap();
 //! ```
@@ -26,7 +26,7 @@
 //! ```rust
 //! # use hb_subset::*;
 //! // Load font directly from a file
-//! let font = Blob::from_file("fonts/NotoSans/full/variable/NotoSans[wdth,wght].ttf").unwrap();
+//! let font = Blob::from_file("tests/fonts/NotoSans.ttf").unwrap();
 //! let font = FontFace::new(font).unwrap();
 //!
 //! // Construct a subset manually and include only some of the letters

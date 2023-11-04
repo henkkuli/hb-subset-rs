@@ -1,2 +1,2 @@
-#include <harfbuzz/hb.h>
-#include <harfbuzz/hb-subset.h>
+#include <hb.h>
+#include <hb-subset.h>
