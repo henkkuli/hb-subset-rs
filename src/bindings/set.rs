@@ -94,7 +94,7 @@ impl<'a> Set<'a> {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
         };
-        unsafe { sys::hb_set_add_range(self.as_raw(), lower, upper) }
+        unsafe { sys::hb_set_del_range(self.as_raw(), lower, upper) }
     }
 
     /// Converts the set into raw [`sys::hb_set_t`] object.
@@ -147,5 +147,82 @@ pub(crate) struct InnerSet(*mut sys::hb_set_t);
 impl Drop for InnerSet {
     fn drop(&mut self) {
         unsafe { sys::hb_set_destroy(self.0) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_empty_works() {
+        let mut set = Set::new().unwrap();
+        assert!(set.is_empty());
+        assert!(set.is_empty());
+        set.insert(10);
+        assert!(!set.is_empty());
+        set.insert(20);
+        assert!(!set.is_empty());
+        set.remove(10);
+        assert!(!set.is_empty());
+        set.remove(20);
+        assert!(set.is_empty());
+    }
+
+    #[test]
+    fn len_works() {
+        let mut set = Set::new().unwrap();
+        assert_eq!(set.len(), 0);
+        set.insert(10);
+        assert_eq!(set.len(), 1);
+        set.insert_range(5..15);
+        assert_eq!(set.len(), 10);
+        set.remove(13);
+        assert_eq!(set.len(), 9);
+    }
+
+    #[test]
+    fn clear_empties_set() {
+        let mut set = Set::new().unwrap();
+        set.insert_range(123..456);
+        assert!(!set.is_empty());
+        assert_eq!(set.len(), 333);
+        set.clear();
+        assert!(set.is_empty());
+        assert_eq!(set.len(), 0);
+    }
+
+    #[test]
+    fn set_contains_inserted_values() {
+        let mut set = Set::new().unwrap();
+        set.insert(1);
+        assert!(!set.contains(3));
+        set.insert(1);
+        assert!(!set.contains(3));
+        set.insert(3);
+        assert!(set.contains(3));
+        set.remove(1);
+        assert!(set.contains(3));
+        set.remove(3);
+        assert!(!set.contains(3));
+    }
+
+    #[test]
+    fn range_insertions_and_deletions_work() {
+        let mut set = Set::new().unwrap();
+        set.insert_range(0..100);
+        assert_eq!(set.len(), 100);
+        set.remove_range(21..=30);
+        assert_eq!(set.len(), 90);
+        set.remove_range(90..200);
+        assert_eq!(set.len(), 80);
+    }
+
+    #[test]
+    fn convert_into_raw_and_back() {
+        let set = Set::new().unwrap();
+        let set_ptr = set.into_raw();
+        let set = unsafe { Set::from_raw(set_ptr) };
+        drop(set);
     }
 }

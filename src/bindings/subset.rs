@@ -101,3 +101,45 @@ impl Drop for SubsetInput {
         unsafe { sys::hb_subset_input_destroy(self.0) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bindings::{tests::NOTO_SANS, Blob};
+
+    #[test]
+    fn keep_everything_should_keep_all_codepoints_and_glyphs() {
+        let mut subset = SubsetInput::new().unwrap();
+        subset.keep_everything();
+        assert_eq!(subset.unicode_set().len(), u32::MAX as usize);
+        assert_eq!(subset.glyph_set().len(), u32::MAX as usize);
+        let orig = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
+        let new = subset.subset_font(&orig).unwrap();
+        assert_eq!(
+            orig.collect_unicodes().unwrap().len(),
+            new.collect_unicodes().unwrap().len()
+        );
+        assert_eq!(orig.get_glyph_count(), new.get_glyph_count());
+    }
+
+    #[test]
+    fn keeping_codepoints_should_keep_ligatures() {
+        let mut subset = SubsetInput::new().unwrap();
+        subset.unicode_set().insert('f' as u32);
+        subset.unicode_set().insert('i' as u32);
+        let font = subset
+            .subset_font(&FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap())
+            .unwrap();
+        assert_eq!(font.collect_unicodes().unwrap().len(), 2);
+        assert_eq!(font.get_glyph_count(), 6); // TODO: Actually check *which* glyphs are included
+                                               // Currently just assuming [empty], f, i, ﬁ, ﬃ, and ﬀ
+    }
+
+    #[test]
+    fn convert_into_raw_and_back() {
+        let subset = SubsetInput::new().unwrap();
+        let subset_ptr = subset.into_raw();
+        let subset = unsafe { SubsetInput::from_raw(subset_ptr) };
+        drop(subset);
+    }
+}

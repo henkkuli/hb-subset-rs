@@ -114,3 +114,55 @@ impl<'a> Clone for Blob<'a> {
         Self(unsafe { sys::hb_blob_reference(self.0) }, PhantomData)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bindings::tests::NOTO_SANS;
+
+    #[test]
+    fn empty_is_empty() {
+        assert!(Blob::from_bytes(&[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn non_empty_is_not_empty() {
+        assert!(!Blob::from_bytes(&[1, 2, 3]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn len_works() {
+        assert_eq!(Blob::from_bytes(&[]).unwrap().len(), 0);
+        assert_eq!(Blob::from_bytes(&[1, 2, 3]).unwrap().len(), 3);
+    }
+
+    #[test]
+    fn content_is_correct() {
+        assert_eq!(&*Blob::from_bytes(&[1, 2, 3]).unwrap(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn from_file_loads_file() {
+        let correct = std::fs::read(NOTO_SANS).unwrap();
+        let blob = Blob::from_file(NOTO_SANS).unwrap();
+        assert_eq!(correct, &*blob);
+    }
+
+    #[test]
+    fn clone_refers_to_same_object() {
+        let b1 = Blob::from_bytes(&[1, 2, 3]).unwrap();
+        let b2 = b1.clone();
+        assert_eq!(&*b1, &[1, 2, 3]);
+        assert_eq!(&*b2, &[1, 2, 3]);
+        drop(b1);
+        assert_eq!(&*b2, &[1, 2, 3]);
+    }
+
+    #[test]
+    fn convert_into_raw_and_back() {
+        let blob = Blob::from_bytes(&[1, 2, 3]).unwrap();
+        let blob_ptr = blob.into_raw();
+        let blob = unsafe { Blob::from_raw(blob_ptr) };
+        drop(blob);
+    }
+}

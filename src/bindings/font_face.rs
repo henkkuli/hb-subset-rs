@@ -43,6 +43,11 @@ impl<'a> FontFace<'a> {
         unsafe { Blob::from_raw(sys::hb_face_reference_blob(self.as_raw())) }
     }
 
+    /// Fetches the glyph-count value of the specified face object.
+    pub fn get_glyph_count(&self) -> usize {
+        (unsafe { sys::hb_face_get_glyph_count(self.as_raw()) }) as usize
+    }
+
     /// Collects all of the Unicode characters covered by the font face.
     pub fn collect_unicodes(&self) -> Result<Set, Error> {
         let set = Set::new()?;
@@ -80,5 +85,33 @@ impl<'a> FontFace<'a> {
 impl<'a> Drop for FontFace<'a> {
     fn drop(&mut self) {
         unsafe { sys::hb_face_destroy(self.0) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bindings::tests::NOTO_SANS;
+
+    #[test]
+    fn loaded_font_contains_correct_number_of_codepoints_and_glyphs() {
+        let font_face = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
+        assert_eq!(font_face.collect_unicodes().unwrap().len(), 3094);
+        assert_eq!(font_face.get_glyph_count(), 4671);
+    }
+
+    #[test]
+    fn underlying_blob_works() {
+        let blob = Blob::from_file(NOTO_SANS).unwrap();
+        let font_face = FontFace::new(blob.clone()).unwrap();
+        assert_eq!(&*font_face.underlying_blob(), &*blob);
+    }
+
+    #[test]
+    fn convert_into_raw_and_back() {
+        let font_face = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
+        let font_face_ptr = font_face.into_raw();
+        let font_face = unsafe { FontFace::from_raw(font_face_ptr) };
+        drop(font_face);
     }
 }

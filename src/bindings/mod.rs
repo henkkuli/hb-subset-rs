@@ -12,3 +12,11 @@ pub use blob::Blob;
 pub use font_face::FontFace;
 pub use set::Set;
 pub use subset::SubsetInput;
+
+#[cfg(test)]
+mod tests {
+    /// Path for Noto Sans font.
+    pub(crate) const NOTO_SANS: &'static str = "tests/fonts/NotoSans.ttf";
+    /// Path for variable version of Noto Sans font.
+    pub(crate) const NOTO_SANS_VARIABLE: &'static str = "tests/fonts/NotoSans-Variable.ttf";
+}
