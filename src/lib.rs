@@ -24,7 +24,7 @@
 //!
 //! To get more control over how the font is subset and what gets included, you can use the lower level API directly:
 //! ```rust
-//! # use hb_subset::*;
+//! # use hb_subset::bindings::*;
 //! // Load font directly from a file
 //! let font = Blob::from_file("tests/fonts/NotoSans.ttf").unwrap();
 //! let font = FontFace::new(font).unwrap();

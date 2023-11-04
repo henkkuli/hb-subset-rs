@@ -1,6 +1,6 @@
 [package]
 name = "hb-subset"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "A wrapper for HarfBuzz font subsetting API "
@@ -10,7 +10,13 @@ readme = "README.md"
 keywords = ["fonts", "subsetting"]
 categories = ["api-bindings", "encoding"]
 
-exclude = ["harfbuzz/", "!harfbuzz/src", "!harfbuzz/COPYING"]
+exclude = [
+    "harfbuzz/",
+    "!harfbuzz/src",
+    "!harfbuzz/COPYING",
+    "tests/fonts",
+    ".github",
+]
 
 [dependencies]
 thiserror = "1.0.50"

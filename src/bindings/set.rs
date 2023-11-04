@@ -134,7 +134,7 @@ impl<'a> Hash for Set<'a> {
 ///
 /// If the pointer was directly contained in [`Set`] with `Drop` implemented, the following code would not compile:
 /// ```rust
-/// # use hb_subset::*;
+/// # use hb_subset::bindings::*;
 /// let mut subset = SubsetInput::new().unwrap();
 /// let mut unicode_set = subset.unicode_set();
 /// // drop(unicode_set);                               // This needs to be called to delete unicode_set,
