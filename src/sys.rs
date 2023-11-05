@@ -1,4 +1,6 @@
 //! Raw FFI bindings to HarfBuzz.
+//! 
+//! See <https://harfbuzz.github.io/reference-manual.html> for documentation on these methods.
 
 #![allow(missing_docs)]
 #![allow(non_camel_case_types)]

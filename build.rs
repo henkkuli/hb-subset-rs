@@ -1,6 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 
+use bindgen::callbacks::ParseCallbacks;
+
 fn main() {
     // First ensure that appropriate version of HarfBuzz exists
     let include_paths = if cfg!(feature = "bundled") {
@@ -28,8 +30,6 @@ fn build_harfbuzz() -> Vec<PathBuf> {
 }
 
 fn build_bindings(include_paths: Vec<PathBuf>) {
-    println!("cargo:rerun-if-changed=wrapper.h");
-
     let bindings = bindgen::Builder::default()
         .clang_args(
             include_paths
@@ -38,6 +38,7 @@ fn build_bindings(include_paths: Vec<PathBuf>) {
         )
         .header("wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .parse_callbacks(Box::new(NoCommentsCallback))
         .allowlist_item("hb_.*")
         .generate()
         .expect("Unable to generate bindings");
@@ -46,4 +47,16 @@ fn build_bindings(include_paths: Vec<PathBuf>) {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+}
+
+/// [`ParseCallbacks`] which make Bindgen generate no comments.
+/// 
+/// This is because Bindgen does not properly support the style of comments used in the C headers, and hence emitting
+/// them to Rust code adds only unnecessary noise.
+#[derive(Debug)]
+struct NoCommentsCallback;
+impl ParseCallbacks for NoCommentsCallback {
+    fn process_comment(&self, _comment: &str) -> Option<String> {
+        Some("".into())
+    }
 }
