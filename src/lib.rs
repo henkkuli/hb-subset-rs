@@ -31,8 +31,8 @@
 //!
 //! // Construct a subset manually and include only some of the letters
 //! let mut subset = SubsetInput::new().unwrap();
-//! subset.unicode_set().insert('f' as u32);
-//! subset.unicode_set().insert('i' as u32);
+//! subset.unicode_set().insert('f');
+//! subset.unicode_set().insert('i');
 //!
 //! // Subset the font using just-constructed subset input
 //! let new_font = subset.subset_font(&font).unwrap();
@@ -73,7 +73,7 @@ pub fn subset(font: &[u8], characters: impl IntoIterator<Item = char>) -> Result
     let mut subset = SubsetInput::new()?;
     let mut unicode_set = subset.unicode_set();
     for char in characters {
-        unicode_set.insert(char as u32);
+        unicode_set.insert(char);
     }
 
     // Load the original font, and then construct a subset from it

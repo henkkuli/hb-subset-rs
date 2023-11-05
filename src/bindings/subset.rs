@@ -1,5 +1,5 @@
 use crate::{
-    bindings::{FontFace, Set},
+    bindings::{CharSet, FontFace, Set, U32Set},
     sys, Error,
 };
 
@@ -36,8 +36,8 @@ impl SubsetInput {
         unsafe { sys::hb_subset_input_keep_everything(self.0) }
     }
 
-    /// Gets the set of Unicode code points to retain, the caller should modify the set as needed.
-    pub fn unicode_set(&mut self) -> Set<'_> {
+    /// Gets the set of Unicode codepoints to retain, the caller should modify the set as needed.
+    pub fn unicode_set(&mut self) -> CharSet<'_> {
         unsafe {
             Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_unicode_set(
                 self.0,
@@ -46,7 +46,7 @@ impl SubsetInput {
     }
 
     /// Gets the set of glyph IDs to retain, the caller should modify the set as needed.
-    pub fn glyph_set(&mut self) -> Set<'_> {
+    pub fn glyph_set(&mut self) -> U32Set<'_> {
         unsafe {
             Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_glyph_set(
                 self.0,
@@ -125,8 +125,8 @@ mod tests {
     #[test]
     fn keeping_codepoints_should_keep_ligatures() {
         let mut subset = SubsetInput::new().unwrap();
-        subset.unicode_set().insert('f' as u32);
-        subset.unicode_set().insert('i' as u32);
+        subset.unicode_set().insert('f');
+        subset.unicode_set().insert('i');
         let font = subset
             .subset_font(&FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap())
             .unwrap();

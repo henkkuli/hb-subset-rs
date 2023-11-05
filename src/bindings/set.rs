@@ -1,13 +1,17 @@
-use std::{hash::Hash, marker::PhantomData, ops::RangeBounds};
+use std::{
+    hash::Hash,
+    marker::PhantomData,
+    ops::{Bound, RangeBounds},
+};
 
 use crate::{sys, Error};
 
 /// Set objects represent a mathematical set of integer values.
 ///
 /// Sets are used in non-shaping APIs to query certain sets of characters or glyphs, or other integer values.
-pub struct Set<'a>(InnerSet, PhantomData<&'a ()>);
+pub struct Set<'a, T>(InnerSet, PhantomData<(&'a (), T)>);
 
-impl Set<'static> {
+impl<T> Set<'static, T> {
     /// Creates a new, initially empty set.
     pub(crate) fn new() -> Result<Self, Error> {
         let set = unsafe { sys::hb_set_create() };
@@ -18,7 +22,7 @@ impl Set<'static> {
     }
 }
 
-impl<'a> Set<'a> {
+impl<'a, T> Set<'a, T> {
     /// Tests whether a set is empty (contains no elements)
     pub fn is_empty(&self) -> bool {
         (unsafe { sys::hb_set_is_empty(self.as_raw()) }) != 0
@@ -33,45 +37,56 @@ impl<'a> Set<'a> {
     pub fn clear(&mut self) {
         unsafe { sys::hb_set_clear(self.as_raw()) }
     }
-
+}
+impl<'a, T> Set<'a, T>
+where
+    T: Into<u32> + Copy,
+{
     /// Tests whether a value belongs to set.
-    pub fn contains(&self, value: u32) -> bool {
-        (unsafe { sys::hb_set_has(self.as_raw(), value) }) != 0
+    pub fn contains(&self, value: T) -> bool {
+        (unsafe { sys::hb_set_has(self.as_raw(), value.into()) }) != 0
     }
 
     /// Inserts a value to set.
-    pub fn insert(&mut self, value: u32) {
-        unsafe { sys::hb_set_add(self.as_raw(), value) }
+    pub fn insert(&mut self, value: T) {
+        unsafe { sys::hb_set_add(self.as_raw(), value.into()) }
     }
 
     /// Removes a value from set.
-    pub fn remove(&mut self, value: u32) {
-        unsafe { sys::hb_set_del(self.as_raw(), value) }
+    pub fn remove(&mut self, value: T) {
+        unsafe { sys::hb_set_del(self.as_raw(), value.into()) }
     }
 
     /// Converts a range to inclusive bounds.
-    pub(crate) fn range_to_bounds(range: impl RangeBounds<u32>) -> Option<(u32, u32)> {
-        let lower = match range.start_bound() {
-            std::ops::Bound::Included(&lower) => lower,
-            std::ops::Bound::Excluded(&lower) => {
+    fn range_to_bounds(range: impl RangeBounds<T>) -> Option<(u32, u32)> {
+        fn bound_to_u32<T: Into<u32> + Copy>(bound: Bound<&T>) -> Bound<u32> {
+            match bound {
+                Bound::Included(&b) => Bound::Included(b.into()),
+                Bound::Excluded(&b) => Bound::Excluded(b.into()),
+                Bound::Unbounded => Bound::Unbounded,
+            }
+        }
+        let lower = match bound_to_u32(range.start_bound()) {
+            Bound::Included(lower) => lower,
+            Bound::Excluded(lower) => {
                 if lower == u32::MAX {
                     return None;
                 } else {
                     lower + 1
                 }
             }
-            std::ops::Bound::Unbounded => 0,
+            Bound::Unbounded => 0,
         };
-        let upper = match range.end_bound() {
-            std::ops::Bound::Included(&upper) => upper,
-            std::ops::Bound::Excluded(&upper) => {
+        let upper = match bound_to_u32(range.end_bound()) {
+            Bound::Included(upper) => upper,
+            Bound::Excluded(upper) => {
                 if upper == 0 {
                     return None;
                 } else {
                     upper - 1
                 }
             }
-            std::ops::Bound::Unbounded => u32::MAX,
+            Bound::Unbounded => u32::MAX,
         };
         if upper < lower {
             return None;
@@ -80,7 +95,7 @@ impl<'a> Set<'a> {
     }
 
     /// Inserts a range of values to set.
-    pub fn insert_range(&mut self, range: impl RangeBounds<u32>) {
+    pub fn insert_range(&mut self, range: impl RangeBounds<T>) {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
         };
@@ -88,7 +103,7 @@ impl<'a> Set<'a> {
     }
 
     /// Removes a range of values from set.
-    pub fn remove_range(&mut self, range: impl RangeBounds<u32>) {
+    pub fn remove_range(&mut self, range: impl RangeBounds<T>) {
         // TODO: Assert that sys::HB_SET_VALUE_INVALID is u32::MAX like it should be
         // const _: () = assert!(u32::MAX <= sys::HB_SET_VALUE_INVALID);
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
@@ -96,7 +111,9 @@ impl<'a> Set<'a> {
         };
         unsafe { sys::hb_set_del_range(self.as_raw(), lower, upper) }
     }
+}
 
+impl<'a, T> Set<'a, T> {
     /// Converts the set into raw [`sys::hb_set_t`] object.
     ///
     /// This method transfers the ownership of the set to the caller. It is up to the caller to call
@@ -124,7 +141,7 @@ impl<'a> Set<'a> {
     }
 }
 
-impl<'a> Hash for Set<'a> {
+impl<'a, T> Hash for Set<'a, T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         unsafe { sys::hb_set_hash(self.as_raw()) }.hash(state);
     }
@@ -150,13 +167,21 @@ impl Drop for InnerSet {
     }
 }
 
+/// Set over unicodecode points.
+pub type CharSet<'a> = Set<'a, char>;
+
+/// Set over [`u32`]s.
+///
+/// [`U32Set`] is commonly used to represent sets of glyph IDs.
+pub type U32Set<'a> = Set<'a, u32>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn is_empty_works() {
-        let mut set = Set::new().unwrap();
+        let mut set = U32Set::new().unwrap();
         assert!(set.is_empty());
         assert!(set.is_empty());
         set.insert(10);
@@ -171,7 +196,7 @@ mod tests {
 
     #[test]
     fn len_works() {
-        let mut set = Set::new().unwrap();
+        let mut set = U32Set::new().unwrap();
         assert_eq!(set.len(), 0);
         set.insert(10);
         assert_eq!(set.len(), 1);
@@ -183,7 +208,7 @@ mod tests {
 
     #[test]
     fn clear_empties_set() {
-        let mut set = Set::new().unwrap();
+        let mut set = U32Set::new().unwrap();
         set.insert_range(123..456);
         assert!(!set.is_empty());
         assert_eq!(set.len(), 333);
@@ -194,7 +219,7 @@ mod tests {
 
     #[test]
     fn set_contains_inserted_values() {
-        let mut set = Set::new().unwrap();
+        let mut set = U32Set::new().unwrap();
         set.insert(1);
         assert!(!set.contains(3));
         set.insert(1);
@@ -209,7 +234,7 @@ mod tests {
 
     #[test]
     fn range_insertions_and_deletions_work() {
-        let mut set = Set::new().unwrap();
+        let mut set = U32Set::new().unwrap();
         set.insert_range(0..100);
         assert_eq!(set.len(), 100);
         set.remove_range(21..=30);
@@ -220,9 +245,9 @@ mod tests {
 
     #[test]
     fn convert_into_raw_and_back() {
-        let set = Set::new().unwrap();
+        let set = U32Set::new().unwrap();
         let set_ptr = set.into_raw();
-        let set = unsafe { Set::from_raw(set_ptr) };
+        let set = unsafe { U32Set::from_raw(set_ptr) };
         drop(set);
     }
 }

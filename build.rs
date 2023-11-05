@@ -50,7 +50,7 @@ fn build_bindings(include_paths: Vec<PathBuf>) {
 }
 
 /// [`ParseCallbacks`] which make Bindgen generate no comments.
-/// 
+///
 /// This is because Bindgen does not properly support the style of comments used in the C headers, and hence emitting
 /// them to Rust code adds only unnecessary noise.
 #[derive(Debug)]

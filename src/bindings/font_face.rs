@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    bindings::{Blob, Set},
+    bindings::{Blob, CharSet},
     sys, Error,
 };
 
@@ -49,8 +49,8 @@ impl<'a> FontFace<'a> {
     }
 
     /// Collects all of the Unicode characters covered by the font face.
-    pub fn collect_unicodes(&self) -> Result<Set, Error> {
-        let set = Set::new()?;
+    pub fn collect_unicodes(&self) -> Result<CharSet, Error> {
+        let set = CharSet::new()?;
         unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)
     }
