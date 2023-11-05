@@ -10,7 +10,7 @@ mod subset;
 
 pub use blob::Blob;
 pub use font_face::FontFace;
-pub use set::{CharSet, Set, U32Set};
+pub use set::{CharSet, Set, SetIter, U32Set};
 pub use subset::SubsetInput;
 
 #[cfg(test)]

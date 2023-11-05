@@ -9,6 +9,8 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
+pub const HB_SET_VALUE_INVALID: u32 = u32::MAX;
+
 #[cfg(test)]
 mod tests {
     use super::*;

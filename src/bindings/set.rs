@@ -1,5 +1,8 @@
 use std::{
+    any::TypeId,
+    fmt,
     hash::Hash,
+    iter::FilterMap,
     marker::PhantomData,
     ops::{Bound, RangeBounds},
 };
@@ -14,7 +17,7 @@ pub struct Set<'a, T>(InnerSet, PhantomData<(&'a (), T)>);
 impl<T> Set<'static, T> {
     /// Creates a new, initially empty set.
     #[doc(alias = "hb_set_create")]
-    pub(crate) fn new() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let set = unsafe { sys::hb_set_create() };
         if set.is_null() {
             return Err(Error::AllocationError);
@@ -31,6 +34,16 @@ impl<'a, T> Set<'a, T> {
     }
 
     /// Returns the number of elements in the set.
+    ///
+    /// Note that this returns the number of elements in the underlying raw set over [`u32`], *not* the number of
+    /// elements that can be represented as `T`. This is especially evident when the set is over [`char`]s and invalid
+    /// code points have been added with [`Self::insert_range`].
+    /// ```rust
+    /// # use hb_subset::bindings::CharSet;
+    /// let mut set = CharSet::new().unwrap();
+    /// set.insert_range('\u{D7FF}'..'\u{E000}'); // Add all surrogate pairs (and \u{D7FF} for technical reasons)
+    /// assert_eq!(set.len(), 2049);
+    /// ```
     #[doc(alias = "hb_set_get_population")]
     pub fn len(&self) -> usize {
         (unsafe { sys::hb_set_get_population(self.as_raw()) }) as usize
@@ -41,10 +54,23 @@ impl<'a, T> Set<'a, T> {
     pub fn clear(&mut self) {
         unsafe { sys::hb_set_clear(self.as_raw()) }
     }
+
+    /// Makes the contents of `self` equal to the contents of `other`.
+    #[doc(alias = "hb_set_set")]
+    pub fn copy_from(&mut self, other: &Self) {
+        unsafe { sys::hb_set_set(self.as_raw(), other.as_raw()) }
+    }
+
+    /// Tests whether `self` contains `other` set.
+    #[doc(alias = "hb_set_is_subset")]
+    pub fn contains_set(&self, other: &Self) -> bool {
+        (unsafe { sys::hb_set_is_subset(other.as_raw(), self.as_raw()) }) != 0
+    }
 }
+
 impl<'a, T> Set<'a, T>
 where
-    T: Into<u32> + Copy,
+    T: Into<u32> + Copy + 'static,
 {
     /// Tests whether a value belongs to set.
     #[doc(alias = "hb_set_has")]
@@ -53,9 +79,15 @@ where
     }
 
     /// Inserts a value to set.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `value` is [`sys::HB_SET_VALUE_INVALID`].
     #[doc(alias = "hb_set_add")]
     pub fn insert(&mut self, value: T) {
-        unsafe { sys::hb_set_add(self.as_raw(), value.into()) }
+        let value = value.into();
+        assert_ne!(value, sys::HB_SET_VALUE_INVALID);
+        unsafe { sys::hb_set_add(self.as_raw(), value) }
     }
 
     /// Removes a value from set.
@@ -85,7 +117,10 @@ where
             Bound::Unbounded => 0,
         };
         let upper = match bound_to_u32(range.end_bound()) {
-            Bound::Included(upper) => upper,
+            Bound::Included(upper) => {
+                assert_ne!(upper, sys::HB_SET_VALUE_INVALID);
+                upper
+            }
             Bound::Excluded(upper) => {
                 if upper == 0 {
                     return None;
@@ -93,7 +128,14 @@ where
                     upper - 1
                 }
             }
-            Bound::Unbounded => u32::MAX,
+            Bound::Unbounded => {
+                // Optimization to allow half-open intervals with character sets
+                if TypeId::of::<T>() == TypeId::of::<char>() {
+                    char::MAX as u32
+                } else {
+                    u32::MAX - 1
+                }
+            }
         };
         if upper < lower {
             return None;
@@ -102,6 +144,20 @@ where
     }
 
     /// Inserts a range of values to set.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `range` explicitly contains [`sys::HB_SET_VALUE_INVALID`]:
+    /// ```should_panic
+    /// # use hb_subset::bindings::U32Set;
+    /// U32Set::new().unwrap().insert_range(u32::MAX-10..=u32::MAX);
+    /// ```
+    /// These still work:
+    /// ```rust
+    /// # use hb_subset::bindings::U32Set;
+    /// U32Set::new().unwrap().insert_range(u32::MAX-10..);
+    /// U32Set::new().unwrap().insert_range(u32::MAX-10..u32::MAX);
+    /// ```
     #[doc(alias = "hb_set_add_range")]
     pub fn insert_range(&mut self, range: impl RangeBounds<T>) {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
@@ -114,11 +170,22 @@ where
     #[doc(alias = "hb_set_del_range")]
     pub fn remove_range(&mut self, range: impl RangeBounds<T>) {
         // TODO: Assert that sys::HB_SET_VALUE_INVALID is u32::MAX like it should be
-        // const _: () = assert!(u32::MAX <= sys::HB_SET_VALUE_INVALID);
+        #[allow(clippy::assertions_on_constants, clippy::absurd_extreme_comparisons)]
+        const _: () = assert!(u32::MAX <= sys::HB_SET_VALUE_INVALID);
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
         };
         unsafe { sys::hb_set_del_range(self.as_raw(), lower, upper) }
+    }
+}
+
+impl<'a, T> Set<'a, T>
+where
+    T: TryFrom<u32>,
+{
+    /// Constructs an iterator over the set.
+    pub fn iter(&self) -> SetIter<'_, 'a, T> {
+        SetIter(InnerSetIter(self, None).filter_map(|v| v.try_into().ok()))
     }
 }
 
@@ -157,6 +224,91 @@ impl<'a, T> Hash for Set<'a, T> {
     }
 }
 
+impl<'a, T> PartialEq for Set<'a, T> {
+    #[doc(alias = "hb_set_is_equal")]
+    fn eq(&self, other: &Self) -> bool {
+        (unsafe { sys::hb_set_is_equal(self.as_raw(), other.as_raw()) }) != 0
+    }
+}
+
+impl<'a, T> Eq for Set<'a, T> {}
+
+impl<'a, T> fmt::Debug for Set<'a, T>
+where
+    T: TryFrom<u32> + fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_set().entries(self).finish()
+    }
+}
+
+impl<'s, 'a, T> IntoIterator for &'s Set<'a, T>
+where
+    T: TryFrom<u32>,
+{
+    type Item = T;
+
+    type IntoIter = SetIter<'s, 'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// Iterator over [`Set`].
+///
+/// Use [`Set::iter`] to construct a [`SetIter`].
+pub struct SetIter<'s, 'a, T>(SetIterFilter<'s, 'a, T>);
+type SetIterFilter<'s, 'a, T> = FilterMap<InnerSetIter<'s, 'a, T>, fn(u32) -> Option<T>>;
+
+impl<'s, 'a, T> Iterator for SetIter<'s, 'a, T>
+where
+    T: TryFrom<u32>,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+pub struct InnerSetIter<'s, 'a, T>(&'s Set<'a, T>, Option<u32>);
+
+impl<'s, 'a, T> Iterator for InnerSetIter<'s, 'a, T> {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.1.as_mut() {
+            None => {
+                // Nothing has been queried from the set yet. Start from the beginning
+                let value = self.1.insert(sys::HB_SET_VALUE_INVALID);
+                let has_value =
+                    (unsafe { sys::hb_set_next(self.0.as_raw(), value as *mut u32) }) != 0;
+
+                if has_value {
+                    self.1
+                } else {
+                    None
+                }
+            }
+            Some(value) => {
+                if *value == sys::HB_SET_VALUE_INVALID {
+                    return None;
+                }
+
+                let has_value =
+                    (unsafe { sys::hb_set_next(self.0.as_raw(), value as *mut u32) }) != 0;
+
+                if has_value {
+                    self.1
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
 /// Implementation detail of Set to hide source reference from drop check.
 ///
 /// If the pointer was directly contained in [`Set`] with `Drop` implemented, the following code would not compile:
@@ -169,7 +321,7 @@ impl<'a, T> Hash for Set<'a, T> {
 /// let new_font = subset.subset_font(&font).unwrap();  // otherwise this line would not compile as unicode_set is already
 ///                                                     // holding a mutable reference to subset.
 /// ```
-pub(crate) struct InnerSet(*mut sys::hb_set_t);
+struct InnerSet(*mut sys::hb_set_t);
 
 impl Drop for InnerSet {
     #[doc(alias = "hb_set_destroy")]
@@ -181,9 +333,9 @@ impl Drop for InnerSet {
 /// Set over unicodecode points.
 pub type CharSet<'a> = Set<'a, char>;
 
-/// Set over [`u32`]s.
+/// Set over [`u32`]s, except [`u32::MAX`].
 ///
-/// [`U32Set`] is commonly used to represent sets of glyph IDs.
+/// Trying to insert [`u32::MAX`] will cause a panic. [`U32Set`] is commonly used to represent sets of glyph IDs.
 pub type U32Set<'a> = Set<'a, u32>;
 
 #[cfg(test)]
@@ -229,7 +381,72 @@ mod tests {
     }
 
     #[test]
-    fn set_contains_inserted_values() {
+    #[should_panic]
+    fn cannot_insert_u32_max() {
+        let mut set = U32Set::new().unwrap();
+        set.insert(u32::MAX);
+    }
+
+    #[test]
+    #[should_panic]
+    fn cannot_insert_range_u32_max() {
+        let mut set = U32Set::new().unwrap();
+        set.insert_range(..=u32::MAX);
+    }
+
+    #[test]
+    fn does_not_contain_u32_max() {
+        let mut set = U32Set::new().unwrap();
+        set.insert_range(..);
+        assert!(!set.contains(u32::MAX));
+    }
+
+    #[test]
+    fn can_contain_max_value() {
+        let mut set = U32Set::new().unwrap();
+        set.insert(u32::MAX - 1);
+        assert!(set.contains(u32::MAX - 1));
+        assert!(!set.is_empty());
+        assert_eq!(set.len(), 1);
+    }
+
+    #[test]
+    fn copy_from_works() {
+        let mut a = U32Set::new().unwrap();
+        a.insert(5);
+        let mut b = U32Set::new().unwrap();
+        b.insert(10);
+        assert_eq!(a.iter().collect::<Vec<_>>(), [5]);
+        assert_eq!(b.iter().collect::<Vec<_>>(), [10]);
+        a.copy_from(&b);
+        assert_eq!(a.iter().collect::<Vec<_>>(), [10]);
+        b.insert(1);
+        assert_eq!(a.iter().collect::<Vec<_>>(), [10]);
+        a.remove(10);
+        assert_eq!(b.iter().collect::<Vec<_>>(), [1, 10]);
+    }
+
+    #[test]
+    fn contains_its_subset() {
+        let mut a = U32Set::new().unwrap();
+        a.insert_range(5..=15);
+        a.insert_range(55..=65);
+        assert!(a.contains_set(&a));
+        let mut b = U32Set::new().unwrap();
+        b.insert_range(7..=14);
+        b.insert(60);
+        assert!(b.contains_set(&b));
+        assert!(a.contains_set(&b));
+        assert!(!b.contains_set(&a));
+        b.insert(65);
+        assert!(a.contains_set(&b));
+        b.insert(66);
+        assert!(!a.contains_set(&b));
+        assert!(!b.contains_set(&a));
+    }
+
+    #[test]
+    fn contains_inserted_values() {
         let mut set = U32Set::new().unwrap();
         set.insert(1);
         assert!(!set.contains(3));
@@ -260,5 +477,73 @@ mod tests {
         let set_ptr = set.into_raw();
         let set = unsafe { U32Set::from_raw(set_ptr) };
         drop(set);
+    }
+
+    #[test]
+    fn equal_works() {
+        let mut a = U32Set::new().unwrap();
+        for i in 0..10 {
+            a.insert(i);
+        }
+        assert_eq!(a, a);
+        let mut b = U32Set::new().unwrap();
+        assert_ne!(a, b);
+        b.insert_range(0..10);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn debug_works() {
+        let mut set = U32Set::new().unwrap();
+        set.insert_range(3..=5);
+        set.insert(7);
+        let mut str = String::new();
+        use fmt::Write;
+        write!(&mut str, "{set:?}").unwrap();
+        assert_eq!(str, "{3, 4, 5, 7}");
+    }
+
+    #[test]
+    fn iter_works() {
+        let mut set = U32Set::new().unwrap();
+        assert!(set.iter().next().is_none());
+        set.insert(0);
+        assert_eq!(set.iter().collect::<Vec<_>>(), [0]);
+        set.insert(0);
+        assert_eq!(set.iter().collect::<Vec<_>>(), [0]);
+        set.insert(10);
+        assert_eq!(set.iter().collect::<Vec<_>>(), [0, 10]);
+        set.insert_range(6..12);
+        assert_eq!(set.iter().collect::<Vec<_>>(), [0, 6, 7, 8, 9, 10, 11]);
+        set.remove_range(8..=10);
+        assert_eq!(set.iter().collect::<Vec<_>>(), [0, 6, 7, 11]);
+    }
+
+    #[test]
+    fn iter_near_max_works() {
+        let mut set = U32Set::new().unwrap();
+        set.insert(u32::MAX - 3);
+        set.insert(u32::MAX - 2);
+        assert_eq!(set.iter().collect::<Vec<_>>(), [u32::MAX - 3, u32::MAX - 2]);
+        set.insert(u32::MAX - 1);
+        assert_eq!(
+            set.iter().collect::<Vec<_>>(),
+            [u32::MAX - 3, u32::MAX - 2, u32::MAX - 1]
+        );
+        set.clear();
+        assert!(set.is_empty());
+        set.insert_range((Bound::Excluded(u32::MAX - 3), Bound::Unbounded));
+        assert_eq!(set.iter().collect::<Vec<_>>(), [u32::MAX - 2, u32::MAX - 1]);
+    }
+
+    #[test]
+    fn iter_of_invalid_codepoints_works() {
+        let mut set = CharSet::new().unwrap();
+        set.insert_range('\u{D7FF}'..'\u{E001}'); // Add all surrogate pairs, and then some
+        assert_eq!(set.iter().collect::<Vec<_>>(), ['\u{D7FF}', '\u{E000}']);
+
+        let mut set = CharSet::new().unwrap();
+        set.insert_range('\u{10FFFF}'..);
+        assert_eq!(set.iter().collect::<Vec<_>>(), ['\u{10FFFF}']);
     }
 }
