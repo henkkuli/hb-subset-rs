@@ -185,7 +185,7 @@ where
 {
     /// Constructs an iterator over the set.
     pub fn iter(&self) -> SetIter<'_, 'a, T> {
-        SetIter(InnerSetIter(self, sys::HB_SET_VALUE_INVALID).filter_map(|v| v.try_into().ok()))
+        SetIter(InnerSetIter::new(self).filter_map(|v| v.try_into().ok()))
     }
 }
 
@@ -272,17 +272,39 @@ where
     }
 }
 
+impl<'s, 'a, T> DoubleEndedIterator for SetIter<'s, 'a, T>
+where
+    T: TryFrom<u32>,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back()
+    }
+}
+
 impl<'s, 'a, T> FusedIterator for SetIter<'s, 'a, T> where T: TryFrom<u32> {}
 
-pub struct InnerSetIter<'s, 'a, T>(&'s Set<'a, T>, u32);
+pub struct InnerSetIter<'s, 'a, T>(&'s Set<'a, T>, u32, u32);
+
+impl<'s, 'a, T> InnerSetIter<'s, 'a, T> {
+    const LAST_VALUE: u32 = sys::HB_SET_VALUE_INVALID - 1;
+    fn new(set: &'s Set<'a, T>) -> Self {
+        #[allow(clippy::assertions_on_constants, clippy::absurd_extreme_comparisons)]
+        const _: () = assert!(u32::MAX == sys::HB_SET_VALUE_INVALID);
+        Self(set, sys::HB_SET_VALUE_INVALID, sys::HB_SET_VALUE_INVALID)
+    }
+
+    fn mark_ended(&mut self) {
+        self.1 = Self::LAST_VALUE;
+        self.2 = 0;
+    }
+}
 
 impl<'s, 'a, T> Iterator for InnerSetIter<'s, 'a, T> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        const LAST_VALUE: u32 = sys::HB_SET_VALUE_INVALID - 1;
         match self.1 {
-            LAST_VALUE => {
+            Self::LAST_VALUE => {
                 // Previously last possible value was returned, so the iterator must have been exhausted
                 None
             }
@@ -290,9 +312,41 @@ impl<'s, 'a, T> Iterator for InnerSetIter<'s, 'a, T> {
                 let has_value =
                     (unsafe { sys::hb_set_next(self.0.as_raw(), &mut self.1 as *mut u32) }) != 0;
                 if has_value {
-                    Some(self.1)
+                    if self.1 >= self.2 {
+                        self.mark_ended();
+                        None
+                    } else {
+                        Some(self.1)
+                    }
                 } else {
-                    self.1 = LAST_VALUE;
+                    self.mark_ended();
+                    None
+                }
+            }
+        }
+    }
+}
+
+impl<'s, 'a, T> DoubleEndedIterator for InnerSetIter<'s, 'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self.2 {
+            0 => {
+                // 0 has been returned, so nothing can be returned from this iterator anymore
+                None
+            }
+            _ => {
+                let has_value =
+                    (unsafe { sys::hb_set_previous(self.0.as_raw(), &mut self.2 as *mut u32) })
+                        != 0;
+                if has_value {
+                    if self.1 != sys::HB_SET_VALUE_INVALID && self.1 >= self.2 {
+                        self.mark_ended();
+                        None
+                    } else {
+                        Some(self.2)
+                    }
+                } else {
+                    self.mark_ended();
                     None
                 }
             }
@@ -549,15 +603,75 @@ mod tests {
         }
         let mut set = U32Set::new().unwrap();
         assert_fused(set.iter());
+        assert_fused(set.iter().rev());
         set.insert(0);
         assert_fused(set.iter());
+        assert_fused(set.iter().rev());
         set.insert(1);
         assert_fused(set.iter());
+        assert_fused(set.iter().rev());
         set.insert(u32::MAX - 3);
         assert_fused(set.iter());
+        assert_fused(set.iter().rev());
         set.insert(u32::MAX - 2);
         assert_fused(set.iter());
+        assert_fused(set.iter().rev());
         set.insert(u32::MAX - 1);
         assert_fused(set.iter());
+        assert_fused(set.iter().rev());
+
+        let mut iter = set.iter();
+        assert_eq!(iter.next_back(), Some(u32::MAX - 1));
+        assert_fused(iter);
+
+        let mut iter = set.iter().rev();
+        assert_eq!(iter.next_back(), Some(0));
+        assert_fused(iter);
+    }
+
+    #[test]
+    fn iter_next_back_works() {
+        let mut set = U32Set::new().unwrap();
+        assert!(set.iter().next().is_none());
+        set.insert(0);
+        set.insert_range(6..12);
+        assert_eq!(
+            set.iter().rev().collect::<Vec<_>>(),
+            [11, 10, 9, 8, 7, 6, 0]
+        );
+        set.remove_range(8..=10);
+        assert_eq!(set.iter().rev().collect::<Vec<_>>(), [11, 7, 6, 0]);
+
+        let mut iter = set.iter();
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next_back(), Some(11));
+        assert_eq!(iter.next_back(), Some(7));
+        assert_eq!(iter.next(), Some(6));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+
+        let mut iter = set.iter();
+        assert_eq!(iter.next_back(), Some(11));
+        assert_eq!(iter.next_back(), Some(7));
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(6));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+
+        let mut iter = set.iter();
+        assert_eq!(iter.next_back(), Some(11));
+        assert_eq!(iter.next_back(), Some(7));
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next_back(), Some(6));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+
+        let mut iter = set.iter();
+        assert_eq!(iter.next_back(), Some(11));
+        assert_eq!(iter.next_back(), Some(7));
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next_back(), Some(6));
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
     }
 }
