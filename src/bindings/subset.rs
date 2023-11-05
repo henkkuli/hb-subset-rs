@@ -20,6 +20,7 @@ pub struct SubsetInput(*mut sys::hb_subset_input_t);
 
 impl SubsetInput {
     /// Creates a new subset input object.
+    #[doc(alias = "hb_subset_input_create_or_fail")]
     pub fn new() -> Result<Self, Error> {
         let input = unsafe { sys::hb_subset_input_create_or_fail() };
         if input.is_null() {
@@ -32,11 +33,13 @@ impl SubsetInput {
     /// glyph names, etc.
     ///
     /// The input can be tailored afterwards by the caller.
+    #[doc(alias = "hb_subset_input_keep_everything")]
     pub fn keep_everything(&mut self) {
         unsafe { sys::hb_subset_input_keep_everything(self.0) }
     }
 
     /// Gets the set of Unicode codepoints to retain, the caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_unicode_set")]
     pub fn unicode_set(&mut self) -> CharSet<'_> {
         unsafe {
             Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_unicode_set(
@@ -46,6 +49,7 @@ impl SubsetInput {
     }
 
     /// Gets the set of glyph IDs to retain, the caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_glyph_set")]
     pub fn glyph_set(&mut self) -> U32Set<'_> {
         unsafe {
             Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_glyph_set(
@@ -55,6 +59,7 @@ impl SubsetInput {
     }
 
     /// Subsets a font according to provided input.
+    #[doc(alias = "hb_subset_or_fail")]
     pub fn subset_font(&self, font: &FontFace<'_>) -> Result<FontFace<'static>, Error> {
         let face = unsafe { sys::hb_subset_or_fail(font.as_raw(), self.0) };
         if face.is_null() {
@@ -91,12 +96,14 @@ impl SubsetInput {
 }
 
 impl Clone for SubsetInput {
+    #[doc(alias = "hb_subset_input_reference")]
     fn clone(&self) -> Self {
         Self(unsafe { sys::hb_subset_input_reference(self.0) })
     }
 }
 
 impl Drop for SubsetInput {
+    #[doc(alias = "hb_subset_input_destroy")]
     fn drop(&mut self) {
         unsafe { sys::hb_subset_input_destroy(self.0) }
     }

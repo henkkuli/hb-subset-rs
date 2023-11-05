@@ -18,6 +18,8 @@ pub struct Blob<'a>(*mut sys::hb_blob_t, PhantomData<&'a [u8]>);
 
 impl Blob<'static> {
     /// Creates a new blob containing the data from the specified binary font file.
+    #[doc(alias = "hb_blob_create_from_file")]
+    #[doc(alias = "hb_blob_create_from_file_or_fail")]
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
         let path = path.as_ref();
         // TODO: Try to make more succinct
@@ -33,6 +35,8 @@ impl Blob<'static> {
 
 impl<'a> Blob<'a> {
     /// Creates a new blob object by wrapping a slice.
+    #[doc(alias = "hb_blob_create")]
+    #[doc(alias = "hb_blob_create_or_fail")]
     pub fn from_bytes(buffer: &'a [u8]) -> Result<Self, Error> {
         let blob = unsafe {
             sys::hb_blob_create_or_fail(
@@ -58,6 +62,7 @@ impl<'a> Blob<'a> {
     }
 
     /// Returns the number of bytes in the blob.
+    #[doc(alias = "hb_blob_get_length")]
     pub fn len(&self) -> usize {
         (unsafe { sys::hb_blob_get_length(self.0) }) as usize
     }
@@ -92,6 +97,7 @@ impl<'a> Blob<'a> {
 impl Deref for Blob<'_> {
     type Target = [u8];
 
+    #[doc(alias = "hb_blob_get_data")]
     fn deref(&self) -> &Self::Target {
         let mut len = 0u32;
         let data = unsafe { sys::hb_blob_get_data(self.0, &mut len as *mut u32) } as *const u8;
@@ -104,12 +110,14 @@ impl Deref for Blob<'_> {
 }
 
 impl<'a> Drop for Blob<'a> {
+    #[doc(alias = "hb_blob_destroy")]
     fn drop(&mut self) {
         unsafe { sys::hb_blob_destroy(self.0) }
     }
 }
 
 impl<'a> Clone for Blob<'a> {
+    #[doc(alias = "hb_blob_reference")]
     fn clone(&self) -> Self {
         Self(unsafe { sys::hb_blob_reference(self.0) }, PhantomData)
     }

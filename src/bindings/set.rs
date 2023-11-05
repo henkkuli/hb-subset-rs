@@ -13,6 +13,7 @@ pub struct Set<'a, T>(InnerSet, PhantomData<(&'a (), T)>);
 
 impl<T> Set<'static, T> {
     /// Creates a new, initially empty set.
+    #[doc(alias = "hb_set_create")]
     pub(crate) fn new() -> Result<Self, Error> {
         let set = unsafe { sys::hb_set_create() };
         if set.is_null() {
@@ -24,16 +25,19 @@ impl<T> Set<'static, T> {
 
 impl<'a, T> Set<'a, T> {
     /// Tests whether a set is empty (contains no elements)
+    #[doc(alias = "hb_set_is_empty")]
     pub fn is_empty(&self) -> bool {
         (unsafe { sys::hb_set_is_empty(self.as_raw()) }) != 0
     }
 
     /// Returns the number of elements in the set.
+    #[doc(alias = "hb_set_get_population")]
     pub fn len(&self) -> usize {
         (unsafe { sys::hb_set_get_population(self.as_raw()) }) as usize
     }
 
     /// Clears out the contents of a set.
+    #[doc(alias = "hb_set_clear")]
     pub fn clear(&mut self) {
         unsafe { sys::hb_set_clear(self.as_raw()) }
     }
@@ -43,16 +47,19 @@ where
     T: Into<u32> + Copy,
 {
     /// Tests whether a value belongs to set.
+    #[doc(alias = "hb_set_has")]
     pub fn contains(&self, value: T) -> bool {
         (unsafe { sys::hb_set_has(self.as_raw(), value.into()) }) != 0
     }
 
     /// Inserts a value to set.
+    #[doc(alias = "hb_set_add")]
     pub fn insert(&mut self, value: T) {
         unsafe { sys::hb_set_add(self.as_raw(), value.into()) }
     }
 
     /// Removes a value from set.
+    #[doc(alias = "hb_set_del")]
     pub fn remove(&mut self, value: T) {
         unsafe { sys::hb_set_del(self.as_raw(), value.into()) }
     }
@@ -95,6 +102,7 @@ where
     }
 
     /// Inserts a range of values to set.
+    #[doc(alias = "hb_set_add_range")]
     pub fn insert_range(&mut self, range: impl RangeBounds<T>) {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
@@ -103,6 +111,7 @@ where
     }
 
     /// Removes a range of values from set.
+    #[doc(alias = "hb_set_del_range")]
     pub fn remove_range(&mut self, range: impl RangeBounds<T>) {
         // TODO: Assert that sys::HB_SET_VALUE_INVALID is u32::MAX like it should be
         // const _: () = assert!(u32::MAX <= sys::HB_SET_VALUE_INVALID);
@@ -142,6 +151,7 @@ impl<'a, T> Set<'a, T> {
 }
 
 impl<'a, T> Hash for Set<'a, T> {
+    #[doc(alias = "hb_set_hash")]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         unsafe { sys::hb_set_hash(self.as_raw()) }.hash(state);
     }
@@ -162,6 +172,7 @@ impl<'a, T> Hash for Set<'a, T> {
 pub(crate) struct InnerSet(*mut sys::hb_set_t);
 
 impl Drop for InnerSet {
+    #[doc(alias = "hb_set_destroy")]
     fn drop(&mut self) {
         unsafe { sys::hb_set_destroy(self.0) }
     }
