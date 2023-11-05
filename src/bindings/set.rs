@@ -2,7 +2,7 @@ use std::{
     any::TypeId,
     fmt,
     hash::Hash,
-    iter::FilterMap,
+    iter::{FilterMap, FusedIterator},
     marker::PhantomData,
     ops::{Bound, RangeBounds},
 };
@@ -185,7 +185,7 @@ where
 {
     /// Constructs an iterator over the set.
     pub fn iter(&self) -> SetIter<'_, 'a, T> {
-        SetIter(InnerSetIter(self, None).filter_map(|v| v.try_into().ok()))
+        SetIter(InnerSetIter(self, sys::HB_SET_VALUE_INVALID).filter_map(|v| v.try_into().ok()))
     }
 }
 
@@ -272,36 +272,27 @@ where
     }
 }
 
-pub struct InnerSetIter<'s, 'a, T>(&'s Set<'a, T>, Option<u32>);
+impl<'s, 'a, T> FusedIterator for SetIter<'s, 'a, T> where T: TryFrom<u32> {}
+
+pub struct InnerSetIter<'s, 'a, T>(&'s Set<'a, T>, u32);
 
 impl<'s, 'a, T> Iterator for InnerSetIter<'s, 'a, T> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.1.as_mut() {
-            None => {
-                // Nothing has been queried from the set yet. Start from the beginning
-                let value = self.1.insert(sys::HB_SET_VALUE_INVALID);
-                let has_value =
-                    (unsafe { sys::hb_set_next(self.0.as_raw(), value as *mut u32) }) != 0;
-
-                if has_value {
-                    self.1
-                } else {
-                    None
-                }
+        const LAST_VALUE: u32 = sys::HB_SET_VALUE_INVALID - 1;
+        match self.1 {
+            LAST_VALUE => {
+                // Previously last possible value was returned, so the iterator must have been exhausted
+                None
             }
-            Some(value) => {
-                if *value == sys::HB_SET_VALUE_INVALID {
-                    return None;
-                }
-
+            _ => {
                 let has_value =
-                    (unsafe { sys::hb_set_next(self.0.as_raw(), value as *mut u32) }) != 0;
-
+                    (unsafe { sys::hb_set_next(self.0.as_raw(), &mut self.1 as *mut u32) }) != 0;
                 if has_value {
-                    self.1
+                    Some(self.1)
                 } else {
+                    self.1 = LAST_VALUE;
                     None
                 }
             }
@@ -545,5 +536,28 @@ mod tests {
         let mut set = CharSet::new().unwrap();
         set.insert_range('\u{10FFFF}'..);
         assert_eq!(set.iter().collect::<Vec<_>>(), ['\u{10FFFF}']);
+    }
+
+    #[test]
+    fn iter_is_fused() {
+        fn assert_fused(mut iter: impl Iterator) {
+            while let Some(_) = iter.next() {}
+            for _ in 0..10 {
+                assert!(iter.next().is_none());
+            }
+            // Believe that iterator is fused after it has returned 11 Nones
+        }
+        let mut set = U32Set::new().unwrap();
+        assert_fused(set.iter());
+        set.insert(0);
+        assert_fused(set.iter());
+        set.insert(1);
+        assert_fused(set.iter());
+        set.insert(u32::MAX - 3);
+        assert_fused(set.iter());
+        set.insert(u32::MAX - 2);
+        assert_fused(set.iter());
+        set.insert(u32::MAX - 1);
+        assert_fused(set.iter());
     }
 }
