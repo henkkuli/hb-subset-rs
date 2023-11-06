@@ -66,6 +66,15 @@ impl<'a, T> Set<'a, T> {
     pub fn contains_set(&self, other: &Self) -> bool {
         (unsafe { sys::hb_set_is_subset(other.as_raw(), self.as_raw()) }) != 0
     }
+
+    /// Constructs a copy of the set with `'static` lifetime.
+    #[doc(alias = "hb_set_copy")]
+    pub fn clone_static(&self) -> Set<'static, T> {
+        Set(
+            InnerSet(unsafe { sys::hb_set_copy(self.as_raw()) }),
+            PhantomData,
+        )
+    }
 }
 
 impl<'a, T> Set<'a, T>
@@ -232,6 +241,12 @@ impl<'a, T> PartialEq for Set<'a, T> {
 }
 
 impl<'a, T> Eq for Set<'a, T> {}
+
+impl<'a, T> Clone for Set<'a, T> {
+    fn clone(&self) -> Self {
+        self.clone_static()
+    }
+}
 
 impl<'a, T> fmt::Debug for Set<'a, T>
 where
@@ -546,6 +561,22 @@ mod tests {
         use fmt::Write;
         write!(&mut str, "{set:?}").unwrap();
         assert_eq!(str, "{3, 4, 5, 7}");
+    }
+
+    #[test]
+    fn cloned_set_does_not_modify_original() {
+        let mut a = U32Set::new().unwrap();
+        a.insert(3);
+        a.insert(5);
+        let mut b = a.clone();
+        assert_eq!(a.len(), 2);
+        assert_eq!(b.len(), 2);
+        a.insert(10);
+        assert_eq!(a.len(), 3);
+        assert_eq!(b.len(), 2);
+        b.remove(3);
+        assert_eq!(a.len(), 3);
+        assert_eq!(b.len(), 1);
     }
 
     #[test]
