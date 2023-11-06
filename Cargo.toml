@@ -1,13 +1,13 @@
 [package]
 name = "hb-subset"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "A wrapper for HarfBuzz font subsetting API "
 homepage = "https://github.com/henkkuli/hb-subset-rs"
 repository = "https://github.com/henkkuli/hb-subset-rs"
 readme = "README.md"
-keywords = ["fonts", "subsetting"]
+keywords = ["font", "subsetting", "harfbuzz"]
 categories = ["api-bindings", "encoding"]
 
 exclude = [

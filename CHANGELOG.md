@@ -2,7 +2,7 @@
 
 All notable changes to hb-subset-rs will be documented in this file.
 
-## [unreleased]
+## [0.2.1] - 2023-11-06
 
 ### Bug Fixes
 
