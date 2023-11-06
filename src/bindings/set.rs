@@ -193,6 +193,8 @@ where
     T: TryFrom<u32>,
 {
     /// Constructs an iterator over the set.
+    #[doc(alias = "hb_set_next")]
+    #[doc(alias = "hb_set_previous")]
     pub fn iter(&self) -> SetIter<'_, 'a, T> {
         SetIter(InnerSetIter::new(self).filter_map(|v| v.try_into().ok()))
     }
