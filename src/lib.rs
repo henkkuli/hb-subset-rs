@@ -43,48 +43,38 @@
 
 #![warn(missing_docs)]
 
-use thiserror::Error;
-
 mod blob;
+mod error;
 mod font_face;
 mod set;
 mod subset;
 
+pub mod sys;
+
 pub use blob::*;
+pub use error::*;
 pub use font_face::*;
 pub use set::*;
 pub use subset::*;
-
-pub mod sys;
-
-/// An enumeration over possible errors.
-#[derive(Debug, Error)]
-pub enum Error {
-    /// An error returned when an allocation fails.
-    #[error("Failed to allocate object")]
-    AllocationError,
-    #[error("Failed to subset font face")]
-    /// An error returned when font face could not be subset.
-    SubsetError,
-    /// An error returned when a font face could not be extracted from blob.
-    #[error("Failed to extract font face from blob")]
-    FontFaceExtractionError,
-}
 
 /// A convenient method to create a subset of a font over given characters.
 ///
 /// The returned font can be used everywhere where the original font was used, as long as the string contains only
 /// characters from the given set. In particular, the font includes all relevant ligatures.
-pub fn subset(font: &[u8], characters: impl IntoIterator<Item = char>) -> Result<Vec<u8>, Error> {
+pub fn subset(
+    font: &[u8],
+    characters: impl IntoIterator<Item = char>,
+) -> Result<Vec<u8>, SubsettingError> {
     // Add all characters to subset, and nothing more.
-    let mut subset = SubsetInput::new()?;
+    let mut subset = SubsetInput::new().map_err(|_| SubsettingError)?;
     let mut unicode_set = subset.unicode_set();
     for char in characters {
         unicode_set.insert(char);
     }
 
     // Load the original font, and then construct a subset from it
-    let font = FontFace::new(Blob::from_bytes(font)?)?;
+    let font = FontFace::new(Blob::from_bytes(font).map_err(|_| SubsettingError)?)
+        .map_err(|_| SubsettingError)?;
     let new_font = subset.subset_font(&font)?;
     let new_font = new_font.underlying_blob().to_vec();
     Ok(new_font)

@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::{sys, CharSet, Error, FontFace, Set, TagSet, U32Set};
+use crate::{sys, AllocationError, CharSet, FontFace, Set, SubsettingError, TagSet, U32Set};
 
 /// A description of how a font should be subset.
 ///
@@ -20,10 +20,10 @@ pub struct SubsetInput(*mut sys::hb_subset_input_t);
 impl SubsetInput {
     /// Creates a new subset input object.
     #[doc(alias = "hb_subset_input_create_or_fail")]
-    pub fn new() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, AllocationError> {
         let input = unsafe { sys::hb_subset_input_create_or_fail() };
         if input.is_null() {
-            return Err(Error::AllocationError);
+            return Err(AllocationError);
         }
         Ok(Self(input))
     }
@@ -178,10 +178,10 @@ impl SubsetInput {
 
     /// Subsets a font according to provided input.
     #[doc(alias = "hb_subset_or_fail")]
-    pub fn subset_font(&self, font: &FontFace<'_>) -> Result<FontFace<'static>, Error> {
+    pub fn subset_font(&self, font: &FontFace<'_>) -> Result<FontFace<'static>, SubsettingError> {
         let face = unsafe { sys::hb_subset_or_fail(font.as_raw(), self.as_raw()) };
         if face.is_null() {
-            return Err(Error::SubsetError);
+            return Err(SubsettingError);
         }
         Ok(unsafe { FontFace::from_raw(face) })
     }

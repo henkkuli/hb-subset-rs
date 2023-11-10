@@ -4,7 +4,7 @@ use std::{
     ptr::{null, null_mut},
 };
 
-use crate::{sys, Blob, CharSet, Error};
+use crate::{sys, AllocationError, Blob, CharSet, FontFaceExtractionError};
 
 /// A font face is an object that represents a single face from within a font family.
 ///
@@ -20,7 +20,7 @@ impl<'a> FontFace<'a> {
     ///
     /// [`new_with_index`]: Self::new_with_index
     #[doc(alias = "hb_face_create")]
-    pub fn new(blob: Blob<'a>) -> Result<Self, Error> {
+    pub fn new(blob: Blob<'a>) -> Result<Self, FontFaceExtractionError> {
         Self::new_with_index(blob, 0)
     }
 
@@ -29,10 +29,10 @@ impl<'a> FontFace<'a> {
     /// The face index is used for blobs of file formats such as TTC and DFont that can contain more than one face. Face
     /// indices within such collections are zero-based.
     #[doc(alias = "hb_face_create")]
-    pub fn new_with_index(blob: Blob<'a>, index: u32) -> Result<Self, Error> {
+    pub fn new_with_index(blob: Blob<'a>, index: u32) -> Result<Self, FontFaceExtractionError> {
         let face = unsafe { sys::hb_face_create(blob.as_raw(), index) };
         if face.is_null() {
-            return Err(Error::FontFaceExtractionError);
+            return Err(FontFaceExtractionError);
         }
         Ok(Self(face, PhantomData))
     }
@@ -55,7 +55,7 @@ impl<'a> FontFace<'a> {
 
     /// Collects all of the Unicode characters covered by the font face.
     #[doc(alias = "hb_face_collect_unicodes")]
-    pub fn collect_unicodes(&self) -> Result<CharSet, Error> {
+    pub fn collect_unicodes(&self) -> Result<CharSet, AllocationError> {
         let set = CharSet::new()?;
         unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)

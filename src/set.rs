@@ -8,7 +8,7 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use crate::{sys, Error};
+use crate::{sys, AllocationError};
 
 /// Set objects represent a mathematical set of integer values.
 ///
@@ -18,10 +18,10 @@ pub struct Set<'a, T>(InnerSet, PhantomData<(&'a (), T)>);
 impl<T> Set<'static, T> {
     /// Creates a new, initially empty set.
     #[doc(alias = "hb_set_create")]
-    pub fn new() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, AllocationError> {
         let set = unsafe { sys::hb_set_create() };
         if set.is_null() {
-            return Err(Error::AllocationError);
+            return Err(AllocationError);
         }
         Ok(Self(InnerSet(set), PhantomData))
     }

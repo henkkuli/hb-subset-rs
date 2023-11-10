@@ -8,7 +8,7 @@ use std::{
     slice,
 };
 
-use crate::{sys, Error};
+use crate::{sys, AllocationError};
 
 /// Blobs wrap a chunk of binary data.
 ///
@@ -20,12 +20,12 @@ impl Blob<'static> {
     /// Creates a new blob containing the data from the specified binary font file.
     #[doc(alias = "hb_blob_create_from_file")]
     #[doc(alias = "hb_blob_create_from_file_or_fail")]
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, AllocationError> {
         let path = CString::new(path.as_ref().as_os_str().as_bytes()).unwrap();
 
         let blob = unsafe { sys::hb_blob_create_from_file_or_fail(path.as_ptr()) };
         if blob.is_null() {
-            return Err(Error::AllocationError);
+            return Err(AllocationError);
         }
         Ok(Self(blob, PhantomData))
     }
@@ -35,21 +35,18 @@ impl<'a> Blob<'a> {
     /// Creates a new blob object by wrapping a slice.
     #[doc(alias = "hb_blob_create")]
     #[doc(alias = "hb_blob_create_or_fail")]
-    pub fn from_bytes(buffer: &'a [u8]) -> Result<Self, Error> {
+    pub fn from_bytes(buffer: &'a [u8]) -> Result<Self, AllocationError> {
         let blob = unsafe {
             sys::hb_blob_create_or_fail(
                 buffer.as_ptr() as *const c_char,
-                buffer
-                    .len()
-                    .try_into()
-                    .map_err(|_| Error::AllocationError)?,
+                buffer.len().try_into().map_err(|_| AllocationError)?,
                 sys::hb_memory_mode_t_HB_MEMORY_MODE_READONLY,
                 null_mut(),
                 None,
             )
         };
         if blob.is_null() {
-            return Err(Error::AllocationError);
+            return Err(AllocationError);
         }
         Ok(Self(blob, PhantomData))
     }
