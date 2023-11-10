@@ -11,6 +11,12 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 pub const HB_SET_VALUE_INVALID: u32 = u32::MAX;
 
+impl From<hb_ot_name_id_predefined_t> for hb_ot_name_id_t {
+    fn from(value: hb_ot_name_id_predefined_t) -> Self {
+        Self(value.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

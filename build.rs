@@ -42,6 +42,8 @@ fn build_bindings(include_paths: Vec<PathBuf>) {
         .allowlist_item("hb_.*")
         .bitfield_enum("hb_subset_flags_t")
         .bitfield_enum("hb_subset_sets_t")
+        .bitfield_enum("hb_ot_name_id_predefined_t")
+        .new_type_alias("hb_ot_name_id_t")
         .generate()
         .expect("Unable to generate bindings");
 
@@ -75,6 +77,10 @@ impl ParseCallbacks for NoCommentsCallback {
         } else if enum_name == Some("hb_subset_flags_t") {
             original_variant_name
                 .strip_prefix("HB_SUBSET_FLAGS_")
+                .map(String::from)
+        } else if enum_name == Some("hb_ot_name_id_predefined_t") {
+            original_variant_name
+                .strip_prefix("HB_OT_NAME_ID_")
                 .map(String::from)
         } else {
             None
