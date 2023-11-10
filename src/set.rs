@@ -39,11 +39,14 @@ impl<'a, T> Set<'a, T> {
     /// Note that this returns the number of elements in the underlying raw set over [`u32`], *not* the number of
     /// elements that can be represented as `T`. This is especially evident when the set is over [`char`]s and invalid
     /// code points have been added with [`Self::insert_range`].
-    /// ```rust
+    /// ```
     /// # use hb_subset::CharSet;
-    /// let mut set = CharSet::new().unwrap();
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut set = CharSet::new()?;
     /// set.insert_range('\u{D7FF}'..'\u{E000}'); // Add all surrogate pairs (and \u{D7FF} for technical reasons)
     /// assert_eq!(set.len(), 2049);
+    /// # Ok(())
+    /// # }
     /// ```
     #[doc(alias = "hb_set_get_population")]
     pub fn len(&self) -> usize {
@@ -160,13 +163,19 @@ where
     /// Will panic if `range` explicitly contains [`sys::HB_SET_VALUE_INVALID`]:
     /// ```should_panic
     /// # use hb_subset::U32Set;
-    /// U32Set::new().unwrap().insert_range(u32::MAX-10..=u32::MAX);
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// U32Set::new()?.insert_range(u32::MAX-10..=u32::MAX);
+    /// # Ok(())
+    /// # }
     /// ```
     /// These still work:
-    /// ```rust
+    /// ```
     /// # use hb_subset::U32Set;
-    /// U32Set::new().unwrap().insert_range(u32::MAX-10..);
-    /// U32Set::new().unwrap().insert_range(u32::MAX-10..u32::MAX);
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// U32Set::new()?.insert_range(u32::MAX-10..);
+    /// U32Set::new()?.insert_range(u32::MAX-10..u32::MAX);
+    /// # Ok(())
+    /// # }
     /// ```
     #[doc(alias = "hb_set_add_range")]
     pub fn insert_range(&mut self, range: impl RangeBounds<T>) {
@@ -379,14 +388,17 @@ impl<'s, 'a, T> DoubleEndedIterator for SetIterImpl<'s, 'a, T> {
 /// Implementation detail of Set to hide source reference from drop check.
 ///
 /// If the pointer was directly contained in [`Set`] with `Drop` implemented, the following code would not compile:
-/// ```rust
+/// ```
 /// # use hb_subset::*;
-/// let mut subset = SubsetInput::new().unwrap();
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut subset = SubsetInput::new()?;
 /// let mut unicode_set = subset.unicode_set();
 /// // drop(unicode_set);                               // This needs to be called to delete unicode_set,
-/// # let font = FontFace::new(Blob::from_bytes(&[]).unwrap()).unwrap();
-/// let new_font = subset.subset_font(&font).unwrap();  // otherwise this line would not compile as unicode_set is already
+/// # let font = FontFace::new(Blob::from_bytes(&[])?)?;
+/// let new_font = subset.subset_font(&font)?;  // otherwise this line would not compile as unicode_set is already
 ///                                                     // holding a mutable reference to subset.
+/// # Ok(())
+/// # }
 /// ```
 struct InnerSet(*mut sys::hb_set_t);
 
@@ -421,10 +433,13 @@ impl Tag {
     /// # Example
     /// ```
     /// # use hb_subset::*;
-    /// let mut subset = SubsetInput::new().unwrap();
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut subset = SubsetInput::new()?;
     /// // Remove character-to-glyph mapping data. This can be useful in PDF files where
     /// // the mapping and positioning has already been done.
     /// subset.drop_table_tag_set().insert(Tag::new(b"cmap"));
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(tag: impl Borrow<[u8; 4]>) -> Self {
         Self(u32::from_be_bytes(*tag.borrow()))

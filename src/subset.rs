@@ -42,9 +42,12 @@ impl SubsetInput {
     /// # Example
     /// ```
     /// # use hb_subset::*;
-    /// let mut subset = SubsetInput::new().unwrap();
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut subset = SubsetInput::new()?;
     /// subset.flags().retain_glyph_names();
     /// assert_eq!(subset.get_flags(), *Flags::default().retain_glyph_names());
+    /// # Ok(())
+    /// # }
     /// ```
     #[doc(alias = "hb_subset_input_set_flags")]
     #[doc(alias = "hb_subset_input_get_flags")]

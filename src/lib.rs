@@ -15,30 +15,36 @@
 //!
 //! # Usage
 //! The simplest way to construct a subset of a font is to use [`subset`] function:
-//! ```no_run
+//! ```
 //! # use std::fs;
-//! let font = fs::read("tests/fonts/NotoSans.ttf").unwrap();
-//! let subset_font = hb_subset::subset(&font, "abc".chars()).unwrap();
-//! fs::write("fonts/subset.ttf", subset_font).unwrap();
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let font = fs::read("tests/fonts/NotoSans.ttf")?;
+//! let subset_font = hb_subset::subset(&font, "abc".chars())?;
+//! fs::write("fonts/subset.ttf", subset_font)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! To get more control over how the font is subset and what gets included, you can use the lower level API directly:
-//! ```rust
+//! ```
 //! # use hb_subset::*;
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Load font directly from a file
-//! let font = Blob::from_file("tests/fonts/NotoSans.ttf").unwrap();
-//! let font = FontFace::new(font).unwrap();
+//! let font = Blob::from_file("tests/fonts/NotoSans.ttf")?;
+//! let font = FontFace::new(font)?;
 //!
 //! // Construct a subset manually and include only some of the letters
-//! let mut subset = SubsetInput::new().unwrap();
+//! let mut subset = SubsetInput::new()?;
 //! subset.unicode_set().insert('f');
 //! subset.unicode_set().insert('i');
 //!
 //! // Subset the font using just-constructed subset input
-//! let new_font = subset.subset_font(&font).unwrap();
+//! let new_font = subset.subset_font(&font)?;
 //!
 //! // Extract the raw font and write to an output file
-//! std::fs::write("out.ttf", &*new_font.underlying_blob()).unwrap();
+//! std::fs::write("out.ttf", &*new_font.underlying_blob())?;
+//! # Ok(())
+//! # }
 //! ```
 
 #![warn(missing_docs)]
