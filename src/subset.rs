@@ -182,11 +182,13 @@ impl SubsetInput {
         }
         Ok(unsafe { FontFace::from_raw(face) })
     }
+}
 
-    /// Converts the subset input into raw [`sys::hb_subset_input_t`] object.
+impl SubsetInput {
+    /// Converts the subset input into raw [`sys::hb_subset_input_t`] pointer.
     ///
     /// This method transfers the ownership of the subset input to the caller. It is up to the caller to call
-    /// [`sys::hb_blob_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`SubsetInput`].
+    /// [`sys::hb_blob_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into [`SubsetInput`].
     pub fn into_raw(self) -> *mut sys::hb_subset_input_t {
         let ptr = self.0;
         std::mem::forget(self);
@@ -200,7 +202,7 @@ impl SubsetInput {
         self.0
     }
 
-    /// Constructs a subset input from raw [`sys::hb_subset_input_t`] object.
+    /// Constructs a subset input from raw [`sys::hb_subset_input_t`] pointer.
     ///
     /// # Safety
     /// The given `subset` pointer must either be constructed by some Harfbuzz function, or be returned from

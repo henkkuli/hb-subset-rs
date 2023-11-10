@@ -62,11 +62,13 @@ impl<'a> Blob<'a> {
     pub fn len(&self) -> usize {
         (unsafe { sys::hb_blob_get_length(self.0) }) as usize
     }
+}
 
-    /// Converts the blob into raw [`sys::hb_blob_t`] object.
+impl<'a> Blob<'a> {
+    /// Converts the blob into raw [`sys::hb_blob_t`] pointer.
     ///
     /// This method transfers the ownership of the blob to the caller. It is up to the caller to call
-    /// [`sys::hb_blob_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`Blob`].
+    /// [`sys::hb_blob_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into [`Blob`].
     pub fn into_raw(self) -> *mut sys::hb_blob_t {
         let ptr = self.0;
         std::mem::forget(self);
@@ -80,7 +82,7 @@ impl<'a> Blob<'a> {
         self.0
     }
 
-    /// Constructs a blob from raw [`sys::hb_blob_t`] object.
+    /// Constructs a blob from raw [`sys::hb_blob_t`] pointer.
     ///
     /// # Safety
     /// The given `blob` pointer must either be constructed by some Harfbuzz function, or be returned from

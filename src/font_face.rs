@@ -56,11 +56,13 @@ impl<'a> FontFace<'a> {
         unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)
     }
+}
 
-    /// Converts the font face into raw [`sys::hb_face_t`] object.
+impl<'a> FontFace<'a> {
+    /// Converts the font face into raw [`sys::hb_face_t`] pointer.
     ///
     /// This method transfers the ownership of the font face to the caller. It is up to the caller to call
-    /// [`sys::hb_face_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`FontFace`].
+    /// [`sys::hb_face_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into [`FontFace`].
     pub fn into_raw(self) -> *mut sys::hb_face_t {
         let ptr = self.0;
         std::mem::forget(self);
@@ -74,7 +76,7 @@ impl<'a> FontFace<'a> {
         self.0
     }
 
-    /// Constructs a font face from raw [`sys::hb_face_t`] object.
+    /// Constructs a font face from raw [`sys::hb_face_t`] pointer.
     ///
     /// # Safety
     /// The given `font_face` pointer must either be constructed by some Harfbuzz function, or be returned from

@@ -210,10 +210,10 @@ where
 }
 
 impl<'a, T> Set<'a, T> {
-    /// Converts the set into raw [`sys::hb_set_t`] object.
+    /// Converts the set into raw [`sys::hb_set_t`] pointer.
     ///
     /// This method transfers the ownership of the set to the caller. It is up to the caller to call
-    /// [`sys::hb_set_destroy`] to free the object, or call [`Self::from_raw`] to convert it back into [`Set`].
+    /// [`sys::hb_set_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into [`Set`].
     pub fn into_raw(self) -> *mut sys::hb_set_t {
         let ptr = self.0 .0;
         std::mem::forget(self);
@@ -227,7 +227,7 @@ impl<'a, T> Set<'a, T> {
         self.0 .0
     }
 
-    /// Constructs a set from raw [`sys::hb_set_t`] object.
+    /// Constructs a set from raw [`sys::hb_set_t`] pointer.
     ///
     /// # Safety
     /// The given `set` pointer must either be constructed by some Harfbuzz function, or be returned from
