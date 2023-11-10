@@ -45,7 +45,7 @@ impl<'a> FontFace<'a> {
 
     /// Fetches the glyph-count value of the specified face object.
     #[doc(alias = "hb_face_get_glyph_count")]
-    pub fn get_glyph_count(&self) -> usize {
+    pub fn glyph_count(&self) -> usize {
         (unsafe { sys::hb_face_get_glyph_count(self.as_raw()) }) as usize
     }
 
@@ -98,7 +98,7 @@ impl<'a> FontFace<'a> {
     #[doc(alias = "hb_ot_name_get_utf8")]
     #[doc(alias = "hb_ot_name_get_utf16")]
     #[doc(alias = "hb_ot_name_get_utf32")]
-    pub fn get_ot_name(&self, name: impl Into<sys::hb_ot_name_id_t>, language: Language) -> String {
+    pub fn ot_name(&self, name: impl Into<sys::hb_ot_name_id_t>, language: Language) -> String {
         let name = name.into();
         let mut len = unsafe {
             sys::hb_ot_name_get_utf8(
@@ -133,13 +133,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_copyright(), "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)");
+    /// assert_eq!(font.copyright(), "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_COPYRIGHT")]
-    pub fn get_copyright(&self) -> String {
-        self.get_ot_name(
+    pub fn copyright(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::COPYRIGHT,
             Language::default(),
         )
@@ -152,13 +152,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_font_family(), "Noto Sans");
+    /// assert_eq!(font.font_family(), "Noto Sans");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_FONT_FAMILY")]
-    pub fn get_font_family(&self) -> String {
-        self.get_ot_name(
+    pub fn font_family(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::FONT_FAMILY,
             Language::default(),
         )
@@ -171,13 +171,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_font_subfamily(), "Regular");
+    /// assert_eq!(font.font_subfamily(), "Regular");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_FONT_SUBFAMILY")]
-    pub fn get_font_subfamily(&self) -> String {
-        self.get_ot_name(
+    pub fn font_subfamily(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::FONT_SUBFAMILY,
             Language::default(),
         )
@@ -190,13 +190,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_unique_id(), "2.013;GOOG;NotoSans-Regular");
+    /// assert_eq!(font.unique_id(), "2.013;GOOG;NotoSans-Regular");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_UNIQUE_ID")]
-    pub fn get_unique_id(&self) -> String {
-        self.get_ot_name(
+    pub fn unique_id(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::UNIQUE_ID,
             Language::default(),
         )
@@ -209,13 +209,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_full_name(), "Noto Sans Regular");
+    /// assert_eq!(font.full_name(), "Noto Sans Regular");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_FULL_NAME")]
-    pub fn get_full_name(&self) -> String {
-        self.get_ot_name(
+    pub fn full_name(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::FULL_NAME,
             Language::default(),
         )
@@ -228,13 +228,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_version_string(), "Version 2.013; ttfautohint (v1.8.4.7-5d5b)");
+    /// assert_eq!(font.version_string(), "Version 2.013; ttfautohint (v1.8.4.7-5d5b)");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_VERSION_STRING")]
-    pub fn get_version_string(&self) -> String {
-        self.get_ot_name(
+    pub fn version_string(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::VERSION_STRING,
             Language::default(),
         )
@@ -247,13 +247,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_postscript_name(), "NotoSans-Regular");
+    /// assert_eq!(font.postscript_name(), "NotoSans-Regular");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_POSTSCRIPT_NAME")]
-    pub fn get_postscript_name(&self) -> String {
-        self.get_ot_name(
+    pub fn postscript_name(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::POSTSCRIPT_NAME,
             Language::default(),
         )
@@ -266,13 +266,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_trademark(), "Noto is a trademark of Google LLC.");
+    /// assert_eq!(font.trademark(), "Noto is a trademark of Google LLC.");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_TRADEMARK")]
-    pub fn get_trademark(&self) -> String {
-        self.get_ot_name(
+    pub fn trademark(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::TRADEMARK,
             Language::default(),
         )
@@ -285,13 +285,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_manufacturer(), "Monotype Imaging Inc.");
+    /// assert_eq!(font.manufacturer(), "Monotype Imaging Inc.");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_MANUFACTURER")]
-    pub fn get_manufacturer(&self) -> String {
-        self.get_ot_name(
+    pub fn manufacturer(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::MANUFACTURER,
             Language::default(),
         )
@@ -304,13 +304,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_designer(), "Monotype Design Team");
+    /// assert_eq!(font.designer(), "Monotype Design Team");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_DESIGNER")]
-    pub fn get_designer(&self) -> String {
-        self.get_ot_name(
+    pub fn designer(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::DESIGNER,
             Language::default(),
         )
@@ -323,13 +323,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_description(), "Designed by Monotype design team, Irene Vlachou.");
+    /// assert_eq!(font.description(), "Designed by Monotype design team, Irene Vlachou.");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_DESCRIPTION")]
-    pub fn get_description(&self) -> String {
-        self.get_ot_name(
+    pub fn description(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::DESCRIPTION,
             Language::default(),
         )
@@ -342,13 +342,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_vendor_url(), "http://www.google.com/get/noto/");
+    /// assert_eq!(font.vendor_url(), "http://www.google.com/get/noto/");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_VENDOR_URL")]
-    pub fn get_vendor_url(&self) -> String {
-        self.get_ot_name(
+    pub fn vendor_url(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::VENDOR_URL,
             Language::default(),
         )
@@ -361,13 +361,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_designer_url(), "http://www.monotype.com/studio");
+    /// assert_eq!(font.designer_url(), "http://www.monotype.com/studio");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_DESIGNER_URL")]
-    pub fn get_designer_url(&self) -> String {
-        self.get_ot_name(
+    pub fn designer_url(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::DESIGNER_URL,
             Language::default(),
         )
@@ -380,13 +380,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_license(), "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL");
+    /// assert_eq!(font.license(), "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_LICENSE")]
-    pub fn get_license(&self) -> String {
-        self.get_ot_name(
+    pub fn license(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::LICENSE,
             Language::default(),
         )
@@ -399,13 +399,13 @@ impl<'a> FontFace<'a> {
     /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
-    /// assert_eq!(font.get_license_url(), "https://scripts.sil.org/OFL");
+    /// assert_eq!(font.license_url(), "https://scripts.sil.org/OFL");
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "HB_OT_NAME_ID_LICENSE_URL")]
-    pub fn get_license_url(&self) -> String {
-        self.get_ot_name(
+    pub fn license_url(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::LICENSE_URL,
             Language::default(),
         )
@@ -413,8 +413,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets typographic family name.
     #[doc(alias = "HB_OT_NAME_ID_TYPOGRAPHIC_FAMILY")]
-    pub fn get_typographic_family(&self) -> String {
-        self.get_ot_name(
+    pub fn typographic_family(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::TYPOGRAPHIC_FAMILY,
             Language::default(),
         )
@@ -422,8 +422,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets typographic subfamily name.
     #[doc(alias = "HB_OT_NAME_ID_TYPOGRAPHIC_SUBFAMILY")]
-    pub fn get_typographic_subfamily(&self) -> String {
-        self.get_ot_name(
+    pub fn typographic_subfamily(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::TYPOGRAPHIC_SUBFAMILY,
             Language::default(),
         )
@@ -431,8 +431,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets compatible full name for MacOS.
     #[doc(alias = "HB_OT_NAME_ID_MAC_FULL_NAME")]
-    pub fn get_mac_full_name(&self) -> String {
-        self.get_ot_name(
+    pub fn mac_full_name(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::MAC_FULL_NAME,
             Language::default(),
         )
@@ -440,8 +440,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets sample text.
     #[doc(alias = "HB_OT_NAME_ID_SAMPLE_TEXT")]
-    pub fn get_sample_text(&self) -> String {
-        self.get_ot_name(
+    pub fn sample_text(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::SAMPLE_TEXT,
             Language::default(),
         )
@@ -449,8 +449,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets PostScript CID findfont name.
     #[doc(alias = "HB_OT_NAME_ID_CID_FINDFONT_NAME")]
-    pub fn get_cid_findfont_name(&self) -> String {
-        self.get_ot_name(
+    pub fn cid_findfont_name(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::CID_FINDFONT_NAME,
             Language::default(),
         )
@@ -458,8 +458,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets WWS family Name.
     #[doc(alias = "HB_OT_NAME_ID_WWS_FAMILY")]
-    pub fn get_wws_family(&self) -> String {
-        self.get_ot_name(
+    pub fn wws_family(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::WWS_FAMILY,
             Language::default(),
         )
@@ -467,8 +467,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets WWS subfamily Name.
     #[doc(alias = "HB_OT_NAME_ID_WWS_SUBFAMILY")]
-    pub fn get_wws_subfamily(&self) -> String {
-        self.get_ot_name(
+    pub fn wws_subfamily(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::WWS_SUBFAMILY,
             Language::default(),
         )
@@ -476,8 +476,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets light background palette.
     #[doc(alias = "HB_OT_NAME_ID_LIGHT_BACKGROUND")]
-    pub fn get_light_background(&self) -> String {
-        self.get_ot_name(
+    pub fn light_background(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::LIGHT_BACKGROUND,
             Language::default(),
         )
@@ -485,8 +485,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets dark background palette.
     #[doc(alias = "HB_OT_NAME_ID_DARK_BACKGROUND")]
-    pub fn get_dark_background(&self) -> String {
-        self.get_ot_name(
+    pub fn dark_background(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::DARK_BACKGROUND,
             Language::default(),
         )
@@ -494,8 +494,8 @@ impl<'a> FontFace<'a> {
 
     /// Gets variations PostScript name prefix.
     #[doc(alias = "HB_OT_NAME_ID_VARIATIONS_PS_PREFIX")]
-    pub fn get_variations_ps_prefix(&self) -> String {
-        self.get_ot_name(
+    pub fn variations_ps_prefix(&self) -> String {
+        self.ot_name(
             sys::hb_ot_name_id_predefined_t::VARIATIONS_PS_PREFIX,
             Language::default(),
         )
@@ -518,7 +518,7 @@ mod tests {
     fn loaded_font_contains_correct_number_of_codepoints_and_glyphs() {
         let font_face = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
         assert_eq!(font_face.collect_unicodes().unwrap().len(), 3094);
-        assert_eq!(font_face.get_glyph_count(), 4671);
+        assert_eq!(font_face.glyph_count(), 4671);
     }
 
     #[test]

@@ -45,26 +45,20 @@ impl SubsetInput {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut subset = SubsetInput::new()?;
     /// subset.flags().retain_glyph_names();
-    /// assert_eq!(subset.get_flags(), *Flags::default().retain_glyph_names());
+    /// assert_eq!(*subset.flags(), *Flags::default().retain_glyph_names());
+    ///
+    /// *subset.flags() = Flags::default();
+    /// assert_eq!(*subset.flags(), Flags::default());
     /// # Ok(())
     /// # }
     /// ```
     #[doc(alias = "hb_subset_input_set_flags")]
     #[doc(alias = "hb_subset_input_get_flags")]
     pub fn flags(&mut self) -> FlagRef<'_> {
-        FlagRef(self, self.get_flags())
-    }
-
-    /// Sets all of the flags in the input object to the values specified by `flags`.
-    #[doc(alias = "hb_subset_input_set_flags")]
-    pub fn set_flags(&mut self, flags: Flags) {
-        unsafe { sys::hb_subset_input_set_flags(self.as_raw(), flags.0 .0) }
-    }
-
-    /// Gets all of the subsetting flags in the input object.
-    #[doc(alias = "hb_subset_input_get_flags")]
-    pub fn get_flags(&self) -> Flags {
-        Flags(unsafe { sys::hb_subset_input_get_flags(self.as_raw()) })
+        FlagRef(
+            self,
+            Flags(unsafe { sys::hb_subset_input_get_flags(self.as_raw()) }),
+        )
     }
 
     /// Gets the set of glyph IDs to retain.
@@ -388,7 +382,7 @@ impl Default for Flags {
     }
 }
 
-/// Helper for setting flags more easily.
+/// Helper which sets the flags on associated [`SubsetInput`] on drop.
 ///
 /// See [`SubsetInput::flags`].
 pub struct FlagRef<'s>(&'s mut SubsetInput, Flags);
@@ -408,7 +402,7 @@ impl<'s> DerefMut for FlagRef<'s> {
 
 impl<'s> Drop for FlagRef<'s> {
     fn drop(&mut self) {
-        self.0.set_flags(self.1);
+        unsafe { sys::hb_subset_input_set_flags(self.0.as_raw(), self.1 .0 .0) }
     }
 }
 
@@ -429,7 +423,7 @@ mod tests {
             orig.collect_unicodes().unwrap().len(),
             new.collect_unicodes().unwrap().len()
         );
-        assert_eq!(orig.get_glyph_count(), new.get_glyph_count());
+        assert_eq!(orig.glyph_count(), new.glyph_count());
     }
 
     #[test]
@@ -441,8 +435,8 @@ mod tests {
             .subset_font(&FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap())
             .unwrap();
         assert_eq!(font.collect_unicodes().unwrap().len(), 2);
-        assert_eq!(font.get_glyph_count(), 6); // TODO: Actually check *which* glyphs are included
-                                               // Currently just assuming [empty], f, i, ﬁ, ﬃ, and ﬀ
+        assert_eq!(font.glyph_count(), 6); // TODO: Actually check *which* glyphs are included
+                                           // Currently just assuming [empty], f, i, ﬁ, ﬃ, and ﬀ
     }
 
     #[test]
