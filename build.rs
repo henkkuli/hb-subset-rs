@@ -40,6 +40,8 @@ fn build_bindings(include_paths: Vec<PathBuf>) {
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .parse_callbacks(Box::new(NoCommentsCallback))
         .allowlist_item("hb_.*")
+        .bitfield_enum("hb_subset_flags_t")
+        .bitfield_enum("hb_subset_sets_t")
         .generate()
         .expect("Unable to generate bindings");
 
@@ -58,5 +60,24 @@ struct NoCommentsCallback;
 impl ParseCallbacks for NoCommentsCallback {
     fn process_comment(&self, _comment: &str) -> Option<String> {
         Some("".into())
+    }
+
+    fn enum_variant_name(
+        &self,
+        enum_name: Option<&str>,
+        original_variant_name: &str,
+        _variant_value: bindgen::callbacks::EnumVariantValue,
+    ) -> Option<String> {
+        if enum_name == Some("hb_subset_sets_t") {
+            original_variant_name
+                .strip_prefix("HB_SUBSET_SETS_")
+                .map(String::from)
+        } else if enum_name == Some("hb_subset_flags_t") {
+            original_variant_name
+                .strip_prefix("HB_SUBSET_FLAGS_")
+                .map(String::from)
+        } else {
+            None
+        }
     }
 }

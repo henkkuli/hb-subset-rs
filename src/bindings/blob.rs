@@ -2,7 +2,7 @@ use std::{
     ffi::{c_char, CString},
     marker::PhantomData,
     ops::Deref,
-    os::unix::prelude::OsStringExt,
+    os::unix::prelude::OsStrExt,
     path::Path,
     ptr::null_mut,
     slice,
@@ -21,9 +21,7 @@ impl Blob<'static> {
     #[doc(alias = "hb_blob_create_from_file")]
     #[doc(alias = "hb_blob_create_from_file_or_fail")]
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let path = path.as_ref();
-        // TODO: Try to make more succinct
-        let path = CString::new(path.as_os_str().to_os_string().into_vec()).unwrap();
+        let path = CString::new(path.as_ref().as_os_str().as_bytes()).unwrap();
 
         let blob = unsafe { sys::hb_blob_create_from_file_or_fail(path.as_ptr()) };
         if blob.is_null() {

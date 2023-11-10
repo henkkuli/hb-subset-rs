@@ -1,7 +1,4 @@
 //! Safe mid-level bindings for HarfBuzz objects.
-//!
-//! These bindings are safe, but might not follow the Rust idioms exactly. For example [`Set`] is a set over [`u32`]s,
-//! but is often used to represent a set over [`char`]s.
 
 mod blob;
 mod font_face;
@@ -10,8 +7,8 @@ mod subset;
 
 pub use blob::Blob;
 pub use font_face::FontFace;
-pub use set::{CharSet, Set, SetIter, U32Set};
-pub use subset::SubsetInput;
+pub use set::{CharSet, Set, SetIter, Tag, TagSet, U32Set};
+pub use subset::{Flags, SubsetInput};
 
 #[cfg(test)]
 mod tests {

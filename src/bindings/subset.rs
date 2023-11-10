@@ -1,5 +1,7 @@
+use std::ops::{Deref, DerefMut};
+
 use crate::{
-    bindings::{CharSet, FontFace, Set, U32Set},
+    bindings::{CharSet, FontFace, Set, TagSet, U32Set},
     sys, Error,
 };
 
@@ -29,31 +31,150 @@ impl SubsetInput {
         Ok(Self(input))
     }
 
-    /// Configure input object to keep everything in the font face. That is, all Unicodes, glyphs, names, layout items,
+    /// Configures input object to keep everything in the font face. That is, all Unicodes, glyphs, names, layout items,
     /// glyph names, etc.
     ///
     /// The input can be tailored afterwards by the caller.
     #[doc(alias = "hb_subset_input_keep_everything")]
     pub fn keep_everything(&mut self) {
-        unsafe { sys::hb_subset_input_keep_everything(self.0) }
+        unsafe { sys::hb_subset_input_keep_everything(self.as_raw()) }
     }
 
-    /// Gets the set of Unicode codepoints to retain, the caller should modify the set as needed.
-    #[doc(alias = "hb_subset_input_unicode_set")]
-    pub fn unicode_set(&mut self) -> CharSet<'_> {
+    /// Gets a proxy for modifying flags.
+    ///
+    /// # Example
+    /// ```
+    /// # use hb_subset::bindings::*;
+    /// let mut subset = SubsetInput::new().unwrap();
+    /// subset.flags().retain_glyph_names();
+    /// assert_eq!(subset.get_flags(), *Flags::default().retain_glyph_names());
+    /// ```
+    #[doc(alias = "hb_subset_input_set_flags")]
+    #[doc(alias = "hb_subset_input_get_flags")]
+    pub fn flags(&mut self) -> FlagRef<'_> {
+        FlagRef(self, self.get_flags())
+    }
+
+    /// Sets all of the flags in the input object to the values specified by `flags`.
+    #[doc(alias = "hb_subset_input_set_flags")]
+    pub fn set_flags(&mut self, flags: Flags) {
+        unsafe { sys::hb_subset_input_set_flags(self.as_raw(), flags.0 .0) }
+    }
+
+    /// Gets all of the subsetting flags in the input object.
+    #[doc(alias = "hb_subset_input_get_flags")]
+    pub fn get_flags(&self) -> Flags {
+        Flags(unsafe { sys::hb_subset_input_get_flags(self.as_raw()) })
+    }
+
+    /// Gets the set of glyph IDs to retain.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_glyph_set")]
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_GLYPH_INDEX")]
+    pub fn glyph_set(&mut self) -> U32Set<'_> {
         unsafe {
-            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_unicode_set(
-                self.0,
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_glyph_set(
+                self.as_raw(),
             )))
         }
     }
 
-    /// Gets the set of glyph IDs to retain, the caller should modify the set as needed.
-    #[doc(alias = "hb_subset_input_glyph_set")]
-    pub fn glyph_set(&mut self) -> U32Set<'_> {
+    /// Gets the set of Unicode codepoints to retain.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_unicode_set")]
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_UNICODE")]
+    pub fn unicode_set(&mut self) -> CharSet<'_> {
         unsafe {
-            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_glyph_set(
-                self.0,
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_unicode_set(
+                self.as_raw(),
+            )))
+        }
+    }
+
+    /// Gets the set of table tags which specifies tables that should not be subsetted.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_NO_SUBSET_TABLE_TAG")]
+    pub fn no_subset_table_tag_set(&mut self) -> TagSet<'_> {
+        unsafe {
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_set(
+                self.as_raw(),
+                sys::hb_subset_sets_t::NO_SUBSET_TABLE_TAG,
+            )))
+        }
+    }
+
+    /// Gets the set of table tags which specifies tables which will be dropped in the subset.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_DROP_TABLE_TAG")]
+    pub fn drop_table_tag_set(&mut self) -> TagSet<'_> {
+        unsafe {
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_set(
+                self.as_raw(),
+                sys::hb_subset_sets_t::DROP_TABLE_TAG,
+            )))
+        }
+    }
+
+    /// Gets the set of name ids that will be retained.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_NAME_ID")]
+    pub fn name_id_set(&mut self) -> U32Set<'_> {
+        unsafe {
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_set(
+                self.as_raw(),
+                sys::hb_subset_sets_t::NAME_ID,
+            )))
+        }
+    }
+
+    /// Gets the set of name lang ids that will be retained.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_NAME_LANG_ID")]
+    pub fn name_lang_id_set(&mut self) -> U32Set<'_> {
+        unsafe {
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_set(
+                self.as_raw(),
+                sys::hb_subset_sets_t::NAME_LANG_ID,
+            )))
+        }
+    }
+
+    /// Gets the set of layout feature tags that will be retained in the subset.
+    ///
+    /// The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_LAYOUT_FEATURE_TAG")]
+    pub fn layout_feature_tag_set(&mut self) -> TagSet<'_> {
+        unsafe {
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_set(
+                self.as_raw(),
+                sys::hb_subset_sets_t::LAYOUT_FEATURE_TAG,
+            )))
+        }
+    }
+
+    /// Gets the set of layout script tags that will be retained in the subset.
+    ///
+    /// Defaults to all tags. The caller should modify the set as needed.
+    #[doc(alias = "hb_subset_input_set")]
+    #[doc(alias = "HB_SUBSET_SETS_LAYOUT_SCRIPT_TAG")]
+    pub fn layout_script_tag_set(&mut self) -> TagSet<'_> {
+        unsafe {
+            Set::from_raw(sys::hb_set_reference(sys::hb_subset_input_set(
+                self.as_raw(),
+                sys::hb_subset_sets_t::LAYOUT_SCRIPT_TAG,
             )))
         }
     }
@@ -61,7 +182,7 @@ impl SubsetInput {
     /// Subsets a font according to provided input.
     #[doc(alias = "hb_subset_or_fail")]
     pub fn subset_font(&self, font: &FontFace<'_>) -> Result<FontFace<'static>, Error> {
-        let face = unsafe { sys::hb_subset_or_fail(font.as_raw(), self.0) };
+        let face = unsafe { sys::hb_subset_or_fail(font.as_raw(), self.as_raw()) };
         if face.is_null() {
             return Err(Error::SubsetError);
         }
@@ -106,6 +227,188 @@ impl Drop for SubsetInput {
     #[doc(alias = "hb_subset_input_destroy")]
     fn drop(&mut self) {
         unsafe { sys::hb_subset_input_destroy(self.0) }
+    }
+}
+
+/// Flags for [`SubsetInput`].
+///
+/// These flags can be used to instruct which tables the subsetter should touch, and how.
+///
+/// # Default flags
+/// ```
+/// # use hb_subset::bindings::Flags;
+/// assert_eq!(
+///     *Flags::default()
+///         .retain_hinting()
+///         .remap_glyph_indices()
+///         .retain_subroutines()
+///         .retain_subroutines()
+///         .remove_legacy_names()
+///         .remove_overlap_simple_flag()
+///         .remove_unrecognized_tables()
+///         .remove_notdef_outline()
+///         .remove_glyph_names()
+///         .recompute_unicode_ranges()
+///         .retain_layout_closure(),
+///     Flags::default()
+/// );
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Flags(sys::hb_subset_flags_t);
+
+#[test]
+fn test_flags_default() {}
+
+impl Flags {
+    fn add_flag(&mut self, flag: sys::hb_subset_flags_t) -> &mut Self {
+        self.0 |= flag;
+        self
+    }
+
+    fn remove_flag(&mut self, flag: sys::hb_subset_flags_t) -> &mut Self {
+        self.0 .0 &= !flag.0;
+        self
+    }
+
+    /// Instructs subsetter to remove hinting instructions.
+    pub fn remove_hinting(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::NO_HINTING)
+    }
+
+    /// Instructs subsetter to retain hinting instructions.
+    pub fn retain_hinting(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::NO_HINTING)
+    }
+
+    /// Instructs subsetter to glyph indices.
+    ///
+    /// If a glyph gets dropped, its index will still be retained as an empty glyph.
+    pub fn retain_glyph_indices(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::RETAIN_GIDS)
+    }
+
+    /// Instructs subsetter to map old glyph indices to new ones.
+    pub fn remap_glyph_indices(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::RETAIN_GIDS)
+    }
+
+    /// Instructs subsetter to remove subroutines from the CFF glyphs.
+    ///
+    /// This has only effect when subsetting a CFF font.
+    pub fn remove_subroutines(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::DESUBROUTINIZE)
+    }
+
+    /// Instructs subsetter to retain subroutines for CFF glyphs.
+    pub fn retain_subroutines(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::DESUBROUTINIZE)
+    }
+
+    /// Instructs subsetter to keep non-unicode name records.
+    pub fn retain_legacy_names(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::NAME_LEGACY)
+    }
+
+    /// Instructs subsetter to remove non-unicode name records.
+    pub fn remove_legacy_names(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::NAME_LEGACY)
+    }
+
+    /// Instructs subsetter to set `OVERLAP_SIMPLE` flag for simple glyphs.
+    ///
+    /// This is not required for OpenType, but may affect rendering in some platforms.
+    pub fn set_overlap_simple_flag(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::SET_OVERLAPS_FLAG)
+    }
+
+    /// Instructs subsetter to not emit `OVERLAP_SIMPLE` flag.
+    pub fn remove_overlap_simple_flag(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::SET_OVERLAPS_FLAG)
+    }
+
+    /// Instructs subsetter to keep unrecognized tables.
+    ///
+    /// The subsetter wil just pass them trough without touching them.
+    pub fn retain_unrecognized_tables(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::PASSTHROUGH_UNRECOGNIZED)
+    }
+
+    /// Instructs subsetter to remove unrecognized tables.
+    pub fn remove_unrecognized_tables(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::PASSTHROUGH_UNRECOGNIZED)
+    }
+
+    /// Instructs subsetter to keep glyph outline for `notdef``.
+    pub fn retain_notdef_outline(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::NOTDEF_OUTLINE)
+    }
+
+    /// Instructs subsetter to remove glyph outline for `notdef``.
+    pub fn remove_notdef_outline(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::NOTDEF_OUTLINE)
+    }
+
+    /// Instructs subsetter to keep glyph name information.
+    pub fn retain_glyph_names(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::GLYPH_NAMES)
+    }
+
+    /// Instructs subsetter to remove glyph name information.
+    pub fn remove_glyph_names(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::GLYPH_NAMES)
+    }
+
+    /// Instructs subsetter to recompute unicode ranges in `OS/2` table.
+    pub fn recompute_unicode_ranges(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::NO_PRUNE_UNICODE_RANGES)
+    }
+
+    /// Instructs subsetter to keep original unicode ranges in `OS/2` table.
+    pub fn retain_unicode_ranges(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::NO_PRUNE_UNICODE_RANGES)
+    }
+
+    /// Instructs subsetter to keep glyphs for all possible combinations of already retained glyphs.
+    ///
+    /// For example, if glyphs corresponding to `f` and `i` are retained, then also glyphs corresponding to `ﬀ`, `ﬁ` and
+    /// `ﬃ` are retained.
+    pub fn retain_layout_closure(&mut self) -> &mut Self {
+        self.remove_flag(sys::hb_subset_flags_t::NO_LAYOUT_CLOSURE)
+    }
+
+    /// Instructs subsetter to keep only minimum set of glyphs disregarding layout closure.
+    pub fn no_layout_closure(&mut self) -> &mut Self {
+        self.add_flag(sys::hb_subset_flags_t::NO_LAYOUT_CLOSURE)
+    }
+}
+
+impl Default for Flags {
+    fn default() -> Self {
+        Self(sys::hb_subset_flags_t::DEFAULT)
+    }
+}
+
+/// Helper for setting flags more easily.
+///
+/// See [`SubsetInput::flags`].
+pub struct FlagRef<'s>(&'s mut SubsetInput, Flags);
+
+impl<'s> Deref for FlagRef<'s> {
+    type Target = Flags;
+
+    fn deref(&self) -> &Self::Target {
+        &self.1
+    }
+}
+impl<'s> DerefMut for FlagRef<'s> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.1
+    }
+}
+
+impl<'s> Drop for FlagRef<'s> {
+    fn drop(&mut self) {
+        self.0.set_flags(self.1);
     }
 }
 
