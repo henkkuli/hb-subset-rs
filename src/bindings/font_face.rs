@@ -1,4 +1,8 @@
-use std::marker::PhantomData;
+use std::{
+    ffi::c_char,
+    marker::PhantomData,
+    ptr::{null, null_mut},
+};
 
 use crate::{
     bindings::{Blob, CharSet},
@@ -58,6 +62,41 @@ impl<'a> FontFace<'a> {
         let set = CharSet::new()?;
         unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)
+    }
+
+    fn get_ot_name(&self, name: sys::hb_ot_name_id_t, language: sys::hb_language_t) -> String {
+        let mut len = unsafe {
+            sys::hb_ot_name_get_utf8(self.as_raw(), name, language, null_mut(), null_mut())
+        };
+        len += 1; // Reserve space for NUL termination
+        let mut buf = vec![0; len as usize];
+        let full_len = unsafe {
+            sys::hb_ot_name_get_utf8(
+                self.as_raw(),
+                name,
+                language,
+                &mut len as *mut u32,
+                buf.as_mut_ptr() as *mut c_char,
+            )
+        };
+        assert!(len <= full_len);
+        buf.truncate(len as usize);
+
+        String::from_utf8(buf).expect("Output is promised to be valid UTF-8")
+    }
+
+    pub fn get_font_family(&self) -> String {
+        self.get_ot_name(
+            sys::hb_ot_name_id_predefined_t_HB_OT_NAME_ID_FONT_FAMILY,
+            null(),
+        )
+    }
+
+    pub fn get_font_subfamily(&self) -> String {
+        self.get_ot_name(
+            sys::hb_ot_name_id_predefined_t_HB_OT_NAME_ID_FONT_SUBFAMILY,
+            null(),
+        )
     }
 
     /// Converts the font face into raw [`sys::hb_face_t`] object.
