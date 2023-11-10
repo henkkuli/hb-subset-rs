@@ -10,6 +10,7 @@
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 pub const HB_SET_VALUE_INVALID: u32 = u32::MAX;
+pub const HB_LANGUAGE_INVALID: *const hb_language_impl_t = std::ptr::null();
 
 impl From<hb_ot_name_id_predefined_t> for hb_ot_name_id_t {
     fn from(value: hb_ot_name_id_predefined_t) -> Self {

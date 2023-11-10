@@ -50,6 +50,7 @@
 #![warn(missing_docs)]
 
 mod blob;
+mod common;
 mod error;
 mod font_face;
 mod set;
@@ -58,6 +59,7 @@ mod subset;
 pub mod sys;
 
 pub use blob::*;
+pub use common::*;
 pub use error::*;
 pub use font_face::*;
 pub use set::*;

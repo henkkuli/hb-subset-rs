@@ -1,6 +1,5 @@
 use std::{
     any::TypeId,
-    borrow::Borrow,
     fmt,
     hash::Hash,
     iter::{FilterMap, FusedIterator},
@@ -8,7 +7,7 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use crate::{sys, AllocationError};
+use crate::{sys, AllocationError, Tag};
 
 /// Set objects represent a mathematical set of integer values.
 ///
@@ -420,81 +419,9 @@ pub type U32Set<'a> = Set<'a, u32>;
 /// Set over [`Tag`]s.
 pub type TagSet<'a> = Set<'a, Tag>;
 
-/// Four byte integers, each byte representing a character.
-///
-/// Tags are used to identify tables, design-variation axes, scripts, languages, font features, and baselines with
-/// human-readable names.
-#[derive(Clone, Copy)]
-pub struct Tag(u32);
-
-impl Tag {
-    /// Constructs a new tag from bytes.
-    ///
-    /// # Example
-    /// ```
-    /// # use hb_subset::*;
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let mut subset = SubsetInput::new()?;
-    /// // Remove character-to-glyph mapping data. This can be useful in PDF files where
-    /// // the mapping and positioning has already been done.
-    /// subset.drop_table_tag_set().insert(Tag::new(b"cmap"));
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn new(tag: impl Borrow<[u8; 4]>) -> Self {
-        Self(u32::from_be_bytes(*tag.borrow()))
-    }
-}
-
-impl From<Tag> for u32 {
-    fn from(tag: Tag) -> Self {
-        tag.0
-    }
-}
-
-impl From<u32> for Tag {
-    fn from(tag: u32) -> Self {
-        Self(tag)
-    }
-}
-
-impl From<Tag> for [u8; 4] {
-    fn from(tag: Tag) -> Self {
-        tag.0.to_be_bytes()
-    }
-}
-
-impl fmt::Debug for Tag {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct FieldFormatter([u8; 4]);
-        impl fmt::Debug for FieldFormatter {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(
-                    f,
-                    "{}{}{}{}",
-                    self.0[0] as char, self.0[1] as char, self.0[2] as char, self.0[3] as char
-                )
-            }
-        }
-        f.debug_tuple("Tag")
-            .field(&FieldFormatter((*self).into()))
-            .finish()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn tag_is_correct() {
-        assert_eq!(u32::from(Tag::new([b'D', b'S', b'I', b'G'])), 0x44534947u32);
-        assert_eq!(
-            format!("{:?}", Tag::new([b'D', b'S', b'I', b'G'])),
-            "Tag(DSIG)"
-        );
-        assert_eq!(format!("{:?}", Tag::new(b"DSIG")), "Tag(DSIG)");
-    }
 
     #[test]
     fn is_empty_works() {
