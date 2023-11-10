@@ -40,7 +40,7 @@ impl<'a, T> Set<'a, T> {
     /// elements that can be represented as `T`. This is especially evident when the set is over [`char`]s and invalid
     /// code points have been added with [`Self::insert_range`].
     /// ```rust
-    /// # use hb_subset::bindings::CharSet;
+    /// # use hb_subset::CharSet;
     /// let mut set = CharSet::new().unwrap();
     /// set.insert_range('\u{D7FF}'..'\u{E000}'); // Add all surrogate pairs (and \u{D7FF} for technical reasons)
     /// assert_eq!(set.len(), 2049);
@@ -159,12 +159,12 @@ where
     ///
     /// Will panic if `range` explicitly contains [`sys::HB_SET_VALUE_INVALID`]:
     /// ```should_panic
-    /// # use hb_subset::bindings::U32Set;
+    /// # use hb_subset::U32Set;
     /// U32Set::new().unwrap().insert_range(u32::MAX-10..=u32::MAX);
     /// ```
     /// These still work:
     /// ```rust
-    /// # use hb_subset::bindings::U32Set;
+    /// # use hb_subset::U32Set;
     /// U32Set::new().unwrap().insert_range(u32::MAX-10..);
     /// U32Set::new().unwrap().insert_range(u32::MAX-10..u32::MAX);
     /// ```
@@ -197,7 +197,7 @@ where
     #[doc(alias = "hb_set_next")]
     #[doc(alias = "hb_set_previous")]
     pub fn iter(&self) -> SetIter<'_, 'a, T> {
-        SetIter(InnerSetIter::new(self).filter_map(|v| v.try_into().ok()))
+        SetIter(SetIterImpl::new(self).filter_map(|v| v.try_into().ok()))
     }
 }
 
@@ -277,7 +277,7 @@ where
 ///
 /// Use [`Set::iter`] to construct a [`SetIter`].
 pub struct SetIter<'s, 'a, T>(SetIterFilter<'s, 'a, T>);
-type SetIterFilter<'s, 'a, T> = FilterMap<InnerSetIter<'s, 'a, T>, fn(u32) -> Option<T>>;
+type SetIterFilter<'s, 'a, T> = FilterMap<SetIterImpl<'s, 'a, T>, fn(u32) -> Option<T>>;
 
 impl<'s, 'a, T> Iterator for SetIter<'s, 'a, T>
 where
@@ -301,9 +301,13 @@ where
 
 impl<'s, 'a, T> FusedIterator for SetIter<'s, 'a, T> where T: TryFrom<u32> {}
 
-pub struct InnerSetIter<'s, 'a, T>(&'s Set<'a, T>, u32, u32);
+/// Actual implementation for [`SetIter`].
+///
+/// This implementation does not care whether the target type can or cannot represent the target type. It just returns
+/// [`u32`], no matter what. [`SetIter`] is responsible to then filter out invalid values.
+struct SetIterImpl<'s, 'a, T>(&'s Set<'a, T>, u32, u32);
 
-impl<'s, 'a, T> InnerSetIter<'s, 'a, T> {
+impl<'s, 'a, T> SetIterImpl<'s, 'a, T> {
     const LAST_VALUE: u32 = sys::HB_SET_VALUE_INVALID - 1;
     fn new(set: &'s Set<'a, T>) -> Self {
         #[allow(clippy::assertions_on_constants, clippy::absurd_extreme_comparisons)]
@@ -317,7 +321,7 @@ impl<'s, 'a, T> InnerSetIter<'s, 'a, T> {
     }
 }
 
-impl<'s, 'a, T> Iterator for InnerSetIter<'s, 'a, T> {
+impl<'s, 'a, T> Iterator for SetIterImpl<'s, 'a, T> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -345,7 +349,7 @@ impl<'s, 'a, T> Iterator for InnerSetIter<'s, 'a, T> {
     }
 }
 
-impl<'s, 'a, T> DoubleEndedIterator for InnerSetIter<'s, 'a, T> {
+impl<'s, 'a, T> DoubleEndedIterator for SetIterImpl<'s, 'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.2 {
             0 => {
@@ -376,7 +380,7 @@ impl<'s, 'a, T> DoubleEndedIterator for InnerSetIter<'s, 'a, T> {
 ///
 /// If the pointer was directly contained in [`Set`] with `Drop` implemented, the following code would not compile:
 /// ```rust
-/// # use hb_subset::bindings::*;
+/// # use hb_subset::*;
 /// let mut subset = SubsetInput::new().unwrap();
 /// let mut unicode_set = subset.unicode_set();
 /// // drop(unicode_set);                               // This needs to be called to delete unicode_set,
@@ -416,7 +420,7 @@ impl Tag {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// let mut subset = SubsetInput::new().unwrap();
     /// // Remove character-to-glyph mapping data. This can be useful in PDF files where
     /// // the mapping and positioning has already been done.

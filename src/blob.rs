@@ -124,7 +124,7 @@ impl<'a> Clone for Blob<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bindings::tests::NOTO_SANS;
+    use crate::tests::NOTO_SANS;
 
     #[test]
     fn empty_is_empty() {

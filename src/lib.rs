@@ -24,7 +24,7 @@
 //!
 //! To get more control over how the font is subset and what gets included, you can use the lower level API directly:
 //! ```rust
-//! # use hb_subset::bindings::*;
+//! # use hb_subset::*;
 //! // Load font directly from a file
 //! let font = Blob::from_file("tests/fonts/NotoSans.ttf").unwrap();
 //! let font = FontFace::new(font).unwrap();
@@ -43,8 +43,17 @@
 
 #![warn(missing_docs)]
 
-use bindings::{Blob, FontFace, SubsetInput};
 use thiserror::Error;
+
+mod blob;
+mod font_face;
+mod set;
+mod subset;
+
+pub use blob::*;
+pub use font_face::*;
+pub use set::*;
+pub use subset::*;
 
 pub mod sys;
 
@@ -61,8 +70,6 @@ pub enum Error {
     #[error("Failed to extract font face from blob")]
     FontFaceExtractionError,
 }
-
-pub mod bindings;
 
 /// A convenient method to create a subset of a font over given characters.
 ///
@@ -81,4 +88,12 @@ pub fn subset(font: &[u8], characters: impl IntoIterator<Item = char>) -> Result
     let new_font = subset.subset_font(&font)?;
     let new_font = new_font.underlying_blob().to_vec();
     Ok(new_font)
+}
+
+#[cfg(test)]
+mod tests {
+    /// Path for Noto Sans font.
+    pub(crate) const NOTO_SANS: &str = "tests/fonts/NotoSans.ttf";
+    /// Path for variable version of Noto Sans font.
+    pub(crate) const NOTO_SANS_VARIABLE: &str = "tests/fonts/NotoSans-Variable.ttf";
 }

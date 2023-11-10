@@ -1,9 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::{
-    bindings::{CharSet, FontFace, Set, TagSet, U32Set},
-    sys, Error,
-};
+use crate::{sys, CharSet, Error, FontFace, Set, TagSet, U32Set};
 
 /// A description of how a font should be subset.
 ///
@@ -44,7 +41,7 @@ impl SubsetInput {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// let mut subset = SubsetInput::new().unwrap();
     /// subset.flags().retain_glyph_names();
     /// assert_eq!(subset.get_flags(), *Flags::default().retain_glyph_names());
@@ -236,7 +233,7 @@ impl Drop for SubsetInput {
 ///
 /// # Default flags
 /// ```
-/// # use hb_subset::bindings::Flags;
+/// # use hb_subset::Flags;
 /// assert_eq!(
 ///     *Flags::default()
 ///         .retain_hinting()
@@ -415,7 +412,7 @@ impl<'s> Drop for FlagRef<'s> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bindings::{tests::NOTO_SANS, Blob};
+    use crate::{tests::NOTO_SANS, Blob};
 
     #[test]
     fn keep_everything_should_keep_all_codepoints_and_glyphs() {

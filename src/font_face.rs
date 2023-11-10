@@ -4,10 +4,7 @@ use std::{
     ptr::{null, null_mut},
 };
 
-use crate::{
-    bindings::{Blob, CharSet},
-    sys, Error,
-};
+use crate::{sys, Blob, CharSet, Error};
 
 /// A font face is an object that represents a single face from within a font family.
 ///
@@ -135,7 +132,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_copyright(), "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)");
@@ -151,7 +148,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_font_family(), "Noto Sans");
@@ -167,7 +164,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_font_subfamily(), "Regular");
@@ -183,7 +180,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_unique_id(), "2.013;GOOG;NotoSans-Regular");
@@ -199,7 +196,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_full_name(), "Noto Sans Regular");
@@ -215,7 +212,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_version_string(), "Version 2.013; ttfautohint (v1.8.4.7-5d5b)");
@@ -231,7 +228,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_postscript_name(), "NotoSans-Regular");
@@ -247,7 +244,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_trademark(), "Noto is a trademark of Google LLC.");
@@ -263,7 +260,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_manufacturer(), "Monotype Imaging Inc.");
@@ -279,7 +276,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_designer(), "Monotype Design Team");
@@ -295,7 +292,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_description(), "Designed by Monotype design team, Irene Vlachou.");
@@ -311,7 +308,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_vendor_url(), "http://www.google.com/get/noto/");
@@ -327,7 +324,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_designer_url(), "http://www.monotype.com/studio");
@@ -343,7 +340,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_license(), "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL");
@@ -359,7 +356,7 @@ impl<'a> FontFace<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hb_subset::bindings::*;
+    /// # use hb_subset::*;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// assert_eq!(font.get_license_url(), "https://scripts.sil.org/OFL");
@@ -448,7 +445,7 @@ impl<'a> Drop for FontFace<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bindings::tests::NOTO_SANS;
+    use crate::tests::NOTO_SANS;
 
     #[test]
     fn loaded_font_contains_correct_number_of_codepoints_and_glyphs() {
