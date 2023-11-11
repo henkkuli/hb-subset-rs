@@ -27,7 +27,7 @@ impl<T> Set<'static, T> {
 }
 
 impl<'a, T> Set<'a, T> {
-    /// Tests whether a set is empty (contains no elements)
+    /// Tests whether set is empty i.e. contains no elements.
     #[doc(alias = "hb_set_is_empty")]
     pub fn is_empty(&self) -> bool {
         (unsafe { sys::hb_set_is_empty(self.as_raw()) }) != 0
