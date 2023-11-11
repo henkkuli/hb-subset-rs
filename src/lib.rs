@@ -14,7 +14,7 @@
 //! > and configure the subset to pass through the layout tables untouched.
 //!
 //! # Usage
-//! The simplest way to construct a subset of a font is to use [`subset`] function:
+//! The simplest way to construct a subset of a font is to use [`subset()`] function:
 //! ```
 //! # use std::fs;
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
