@@ -1,4 +1,4 @@
-use std::{ffi::c_char, marker::PhantomData, ptr::null_mut};
+use std::{ffi::c_char, marker::PhantomData, ops::Deref, ptr::null_mut};
 
 use crate::{sys, AllocationError, Blob, CharSet, FontFaceExtractionError, Language};
 
@@ -6,6 +6,7 @@ use crate::{sys, AllocationError, Blob, CharSet, FontFaceExtractionError, Langua
 ///
 /// More precisely, a font face represents a single face in a binary font file. Font faces are typically built from a
 /// binary blob and a face index. Font faces are used to create fonts.
+#[repr(transparent)]
 pub struct FontFace<'a>(*mut sys::hb_face_t, PhantomData<Blob<'a>>);
 
 impl<'a> FontFace<'a> {
@@ -55,6 +56,29 @@ impl<'a> FontFace<'a> {
         let set = CharSet::new()?;
         unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)
+    }
+
+    /// Preprocesses the face and attaches data that will be needed by the subsetter.
+    /// 
+    /// Future subsetting operations can use the precomputed data to speed up the subsetting operation. The
+    /// preprocessing operation may take longer than the time it takes to produce a subset from the source font. Thus
+    /// the main performance gains are made when a preprocessed face is reused for multiple subsetting operations.
+    /// 
+    /// # Example
+    /// ```
+    /// # use hb_subset::*;
+    /// # fn subsets() -> impl IntoIterator<Item = SubsetInput> { [SubsetInput::new().unwrap()] }
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
+    /// let processed = font.preprocess_for_subsetting();
+    /// for subset in subsets() {
+    ///     subset.subset_font(&processed)?;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn preprocess_for_subsetting(&self) -> PreprocessedFontFace<'a> {
+        PreprocessedFontFace(unsafe { sys::hb_subset_preprocess(self.0) }, PhantomData)
     }
 }
 
@@ -508,6 +532,20 @@ impl<'a> Drop for FontFace<'a> {
     #[doc(alias = "hb_face_destroy")]
     fn drop(&mut self) {
         unsafe { sys::hb_face_destroy(self.0) }
+    }
+}
+
+/// Font face that has been preprocessed for subsetting.
+/// 
+/// See [FontFace::preprocess_for_subsetting()].
+#[repr(transparent)]
+pub struct PreprocessedFontFace<'a>(*mut sys::hb_face_t, PhantomData<Blob<'a>>);
+
+impl<'a> Deref for PreprocessedFontFace<'a> {
+    type Target = FontFace<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { std::mem::transmute(self) }
     }
 }
 
