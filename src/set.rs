@@ -251,7 +251,7 @@ impl<'a, T> PartialEq for Set<'a, T> {
     }
 }
 
-impl<'a, T> Eq for Set<'a, T> {}
+impl<'a, T> Eq for Set<'a, T> where T: Eq {}
 
 impl<'a, T> Clone for Set<'a, T> {
     fn clone(&self) -> Self {
