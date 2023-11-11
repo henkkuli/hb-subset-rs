@@ -212,13 +212,6 @@ impl SubsetInput {
     }
 }
 
-impl Clone for SubsetInput {
-    #[doc(alias = "hb_subset_input_reference")]
-    fn clone(&self) -> Self {
-        Self(unsafe { sys::hb_subset_input_reference(self.0) })
-    }
-}
-
 impl Drop for SubsetInput {
     #[doc(alias = "hb_subset_input_destroy")]
     fn drop(&mut self) {
