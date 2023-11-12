@@ -1,5 +1,6 @@
-//! This crate exposes a [HarfBuzz](https://github.com/harfbuzz/harfbuzz) API for subsetting a font.
+//! This crate exposes [HarfBuzz](https://github.com/harfbuzz/harfbuzz) API for subsetting fonts.
 //!
+//! # What is subsetting?
 //! From HarfBuzz documentation:
 //! > Subsetting reduces the codepoint coverage of font files and removes all data that is no longer needed. A subset
 //! > input describes the desired subset. The input is provided along with a font to the subsetting operation. Output is
@@ -13,8 +14,20 @@
 //! > Fonts with graphite or AAT tables may still be subsetted but will likely need to use the retain glyph ids option
 //! > and configure the subset to pass through the layout tables untouched.
 //!
+//! In other words, subsetting allows you to take a large font and construct a new, smaller font which has only those
+//! characters that you need. Be sure to check the license of the font though, as not all fonts can be legally
+//! subsetted.
+//! 
+//! # Why?
+//! Many modern fonts can contain hundreds or even thousands of glyphs, of which only a couple dozen or maybe hundred is
+//! needed in any single document. This also means that modern fonts can be very bulky compared to what is actually
+//! needed. The solution to this is font subsetting: We can construct a font that includes only those glyphs and
+//! features that are needed for the document.
+//! 
 //! # Usage
-//! The simplest way to construct a subset of a font is to use [`subset()`] function:
+//! The simplest way to construct a subset of a font is to use [`subset()`] function. In the following example, we keep
+//! only glyphs that are needed show any combination of characters 'a', 'b' and 'c', e.g. "abc" and "cabba" can be
+//! rendered, but "foobar" cannot:
 //! ```
 //! # use std::fs;
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,6 +58,13 @@
 //! std::fs::write("tests/fonts/subset.ttf", &*new_font.underlying_blob())?;
 //! # Ok(())
 //! # }
+//! ```
+//! 
+//! # Using bundled version of HarfBuzz
+//! By default, this crate uses the system HarfBuzz installation. If it is not available, or it is too old, this crate
+//! can also used a bundled copy of HarfBuzz by using feature `bundled`:
+//! ```bash
+//! cargo add hb-subset --features bundled
 //! ```
 
 #![warn(missing_docs)]

@@ -2,6 +2,44 @@
 
 All notable changes to hb-subset-rs will be documented in this file.
 
+## [0.3.0] - 2023-11-12
+
+### Bug Fixes
+
+- [**breaking**] Set equality requires Eq
+- [**breaking**] Remove confusing Clone implementation from SubsetInput
+- Examples write to existing folder
+
+### Documentation
+
+- Use ? instead of unwrap
+- Use raw pointer instead of raw object
+- Reword doc for Set.is_empty()
+- Fix link to subset in crate doc
+
+### Features
+
+- Allow editing flags and sets of SubsetInput
+- Add getters for font face name strings
+- Use more specific error types
+- Add safe wrapper for language
+- Add font preprocessing for faster subsetting
+- Add Map
+- Add old_to_new_glyph_mapping to SubsetInput
+- Add SubsetPlan
+- Allow getting nominal glyph mapping from font face
+
+### Miscellaneous Tasks
+
+- [**breaking**] Remove get_ prefix from function names
+- [**breaking**] Loosen bounds on Sets
+- Run formatting
+- Move Flags implementation to own module
+
+### Refactor
+
+- [**breaking**] Move bindings to the main level of the crate
+
 ## [0.2.1] - 2023-11-06
 
 ### Bug Fixes
