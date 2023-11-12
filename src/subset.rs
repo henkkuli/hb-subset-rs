@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{sys, AllocationError, CharSet, FontFace, Map, Set, SubsettingError, TagSet, U32Set};
 
 mod flags;
@@ -205,13 +207,26 @@ impl SubsetInput {
         }
         Ok(unsafe { FontFace::from_raw(face) })
     }
+
+    /// Computes a plan for subsetting the supplied face according to a provided input.
+    ///
+    /// The plan describes which tables and glyphs should be retained.
+    #[doc(alias = "hb_subset_plan_create_or_fail")]
+    pub fn plan<'f>(&self, font: &'f FontFace<'_>) -> Result<SubsetPlan<'f, '_>, SubsettingError> {
+        let plan = unsafe { sys::hb_subset_plan_create_or_fail(font.as_raw(), self.as_raw()) };
+        if plan.is_null() {
+            return Err(SubsettingError);
+        }
+        Ok(unsafe { SubsetPlan::from_raw(plan) })
+    }
 }
 
 impl SubsetInput {
     /// Converts the subset input into raw [`sys::hb_subset_input_t`] pointer.
     ///
     /// This method transfers the ownership of the subset input to the caller. It is up to the caller to call
-    /// [`sys::hb_blob_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into [`SubsetInput`].
+    /// [`sys::hb_subset_input_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into
+    /// [`SubsetInput`].
     pub fn into_raw(self) -> *mut sys::hb_subset_input_t {
         let ptr = self.0;
         std::mem::forget(self);
@@ -239,6 +254,106 @@ impl Drop for SubsetInput {
     #[doc(alias = "hb_subset_input_destroy")]
     fn drop(&mut self) {
         unsafe { sys::hb_subset_input_destroy(self.0) }
+    }
+}
+
+/// Information about how a subsetting operation will be executed.
+///
+/// This includes e.g. how glyph ids are mapped from the original font to the subset.
+pub struct SubsetPlan<'f, 'b> {
+    plan: *mut sys::hb_subset_plan_t,
+    // The lifetime here is actually referring to the lifetime of SubsetPlan
+    unicode_to_old_glyph_mapping: Map<'static, char, u32>,
+    new_to_old_glyph_mapping: Map<'static, u32, u32>,
+    old_to_new_glyph_mapping: Map<'static, u32, u32>,
+    _font: PhantomData<&'f FontFace<'b>>,
+}
+
+impl<'f, 'b> SubsetPlan<'f, 'b> {
+    /// Executes the subsetting plan.
+    #[doc(alias = "hb_subset_plan_execute_or_fail")]
+    pub fn subset(&self) -> Result<FontFace<'b>, SubsettingError> {
+        let font = unsafe { sys::hb_subset_plan_execute_or_fail(self.as_raw()) };
+        if font.is_null() {
+            return Err(SubsettingError);
+        }
+        Ok(unsafe { FontFace::from_raw(font) })
+    }
+
+    /// Returns the mapping between codepoints in the original font and the associated glyph id in the original font.
+    #[doc(alias = "hb_subset_plan_unicode_to_old_glyph_mapping")]
+    pub fn unicode_to_old_glyph_mapping(&self) -> &'_ Map<'_, char, u32> {
+        &self.unicode_to_old_glyph_mapping
+    }
+
+    /// Returns the mapping between glyphs in the subset that will be produced by plan and the glyph in the original font.
+    #[doc(alias = "hb_subset_plan_new_to_old_glyph_mapping")]
+    pub fn new_to_old_glyph_mapping(&self) -> &'_ Map<'_, u32, u32> {
+        &self.new_to_old_glyph_mapping
+    }
+
+    /// Returns the mapping between glyphs in the original font to glyphs in the subset that will be produced by plan.
+    #[doc(alias = "hb_subset_plan_old_to_new_glyph_mapping")]
+    pub fn old_to_new_glyph_mapping(&self) -> &'_ Map<'_, u32, u32> {
+        &self.old_to_new_glyph_mapping
+    }
+}
+
+impl<'f, 'b> SubsetPlan<'f, 'b> {
+    /// Converts the subset plan into raw [`sys::hb_subset_plan_t`] pointer.
+    ///
+    /// This method transfers the ownership of the subset plan to the caller. It is up to the caller to call
+    /// [`sys::hb_subset_plan_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into
+    /// [`SubsetPlan`].
+    pub fn into_raw(self) -> *mut sys::hb_subset_plan_t {
+        let ptr = self.plan;
+        std::mem::forget(self);
+        ptr
+    }
+
+    /// Exposes the raw inner pointer without transferring the ownership.
+    ///
+    /// Unlike [`Self::into_raw`], this method does not transfer the ownership of the pointer to the caller.
+    pub fn as_raw(&self) -> *mut sys::hb_subset_plan_t {
+        self.plan
+    }
+
+    /// Constructs a subset plan from raw [`sys::hb_subset_plan_t`] pointer.
+    ///
+    /// # Safety
+    /// The given `plan` pointer must either be constructed by some Harfbuzz function, or be returned from
+    /// [`Self::into_raw`].
+    pub unsafe fn from_raw(plan: *mut sys::hb_subset_plan_t) -> Self {
+        let unicode_to_old_glyph_mapping = unsafe {
+            Map::from_raw(sys::hb_map_reference(
+                sys::hb_subset_plan_unicode_to_old_glyph_mapping(plan),
+            ))
+        };
+        let new_to_old_glyph_mapping = unsafe {
+            Map::from_raw(sys::hb_map_reference(
+                sys::hb_subset_plan_new_to_old_glyph_mapping(plan),
+            ))
+        };
+        let old_to_new_glyph_mapping = unsafe {
+            Map::from_raw(sys::hb_map_reference(
+                sys::hb_subset_plan_old_to_new_glyph_mapping(plan),
+            ))
+        };
+
+        Self {
+            plan,
+            unicode_to_old_glyph_mapping,
+            new_to_old_glyph_mapping,
+            old_to_new_glyph_mapping,
+            _font: PhantomData,
+        }
+    }
+}
+
+impl<'f, 'b> Drop for SubsetPlan<'f, 'b> {
+    #[doc(alias = "hb_subset_plan_destroy")]
+    fn drop(&mut self) {
+        unsafe { sys::hb_subset_plan_destroy(self.plan) }
     }
 }
 
