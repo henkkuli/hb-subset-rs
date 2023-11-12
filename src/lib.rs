@@ -53,6 +53,7 @@ mod blob;
 mod common;
 mod error;
 mod font_face;
+mod map;
 mod set;
 mod subset;
 
@@ -62,6 +63,7 @@ pub use blob::*;
 pub use common::*;
 pub use error::*;
 pub use font_face::*;
+pub use map::*;
 pub use set::*;
 pub use subset::*;
 
