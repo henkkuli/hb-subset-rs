@@ -59,11 +59,11 @@ impl<'a> FontFace<'a> {
     }
 
     /// Preprocesses the face and attaches data that will be needed by the subsetter.
-    /// 
+    ///
     /// Future subsetting operations can use the precomputed data to speed up the subsetting operation. The
     /// preprocessing operation may take longer than the time it takes to produce a subset from the source font. Thus
     /// the main performance gains are made when a preprocessed face is reused for multiple subsetting operations.
-    /// 
+    ///
     /// # Example
     /// ```
     /// # use hb_subset::*;
@@ -536,7 +536,7 @@ impl<'a> Drop for FontFace<'a> {
 }
 
 /// Font face that has been preprocessed for subsetting.
-/// 
+///
 /// See [FontFace::preprocess_for_subsetting()].
 #[repr(transparent)]
 pub struct PreprocessedFontFace<'a>(*mut sys::hb_face_t, PhantomData<Blob<'a>>);
