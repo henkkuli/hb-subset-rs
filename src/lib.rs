@@ -20,7 +20,7 @@
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let font = fs::read("tests/fonts/NotoSans.ttf")?;
 //! let subset_font = hb_subset::subset(&font, "abc".chars())?;
-//! fs::write("fonts/subset.ttf", subset_font)?;
+//! fs::write("tests/fonts/subset.ttf", subset_font)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -42,7 +42,7 @@
 //! let new_font = subset.subset_font(&font)?;
 //!
 //! // Extract the raw font and write to an output file
-//! std::fs::write("out.ttf", &*new_font.underlying_blob())?;
+//! std::fs::write("tests/fonts/subset.ttf", &*new_font.underlying_blob())?;
 //! # Ok(())
 //! # }
 //! ```
