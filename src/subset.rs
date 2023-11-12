@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::{sys, AllocationError, CharSet, FontFace, Set, SubsettingError, TagSet, U32Set};
+use crate::{sys, AllocationError, CharSet, FontFace, Map, Set, SubsettingError, TagSet, U32Set};
 
 /// A description of how a font should be subset.
 ///
@@ -170,6 +170,27 @@ impl SubsetInput {
                 self.as_raw(),
                 sys::hb_subset_sets_t::LAYOUT_SCRIPT_TAG,
             )))
+        }
+    }
+
+    /// Returns a map which can be used to provide an explicit mapping from old to new glyph id's in the produced
+    /// subset. The caller should populate the map as desired. If this map is left empty then glyph ids will be
+    /// automatically mapped to new values by the subsetter. If populated, the mapping must be unique. That is no two
+    /// original glyph ids can be mapped to the same new id. Additionally, if a mapping is provided then the retain gids
+    /// option cannot be enabled.
+    ///
+    /// Any glyphs that are retained in the subset which are not specified in this mapping will be assigned glyph ids
+    /// after the highest glyph id in the mapping.
+    ///
+    /// Note: this will accept and apply non-monotonic mappings, however this may result in unsorted Coverage tables.
+    /// Such fonts may not work for all use cases (for example ots will reject unsorted coverage tables). So it's
+    /// recommended, if possible, to supply a monotonic mapping.
+    #[doc(alias = "hb_subset_input_old_to_new_glyph_mapping")]
+    pub fn old_to_new_glyph_mapping(&mut self) -> Map<'_, u32, u32> {
+        unsafe {
+            Map::from_raw(sys::hb_map_reference(
+                sys::hb_subset_input_old_to_new_glyph_mapping(self.as_raw()),
+            ))
         }
     }
 
@@ -432,6 +453,12 @@ mod tests {
         assert_eq!(font.collect_unicodes().unwrap().len(), 2);
         assert_eq!(font.glyph_count(), 6); // TODO: Actually check *which* glyphs are included
                                            // Currently just assuming [empty], f, i, ﬁ, ﬃ, and ﬀ
+    }
+
+    #[test]
+    #[ignore]
+    fn old_to_new_glyph_mapping() {
+        todo!()
     }
 
     #[test]
