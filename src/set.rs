@@ -82,7 +82,7 @@ impl<'a, T> Set<'a, T> {
 
 impl<'a, T> Set<'a, T>
 where
-    T: Into<u32> + Copy + 'static,
+    T: Into<u32>,
 {
     /// Tests whether a value belongs to set.
     #[doc(alias = "hb_set_has")]
@@ -109,11 +109,14 @@ where
     }
 
     /// Converts a range to inclusive bounds.
-    fn range_to_bounds(range: impl RangeBounds<T>) -> Option<(u32, u32)> {
-        fn bound_to_u32<T: Into<u32> + Copy>(bound: Bound<&T>) -> Bound<u32> {
+    fn range_to_bounds(range: impl RangeBounds<T>) -> Option<(u32, u32)>
+    where
+        T: Clone + 'static,
+    {
+        fn bound_to_u32<T: Clone + Into<u32>>(bound: Bound<&T>) -> Bound<u32> {
             match bound {
-                Bound::Included(&b) => Bound::Included(b.into()),
-                Bound::Excluded(&b) => Bound::Excluded(b.into()),
+                Bound::Included(b) => Bound::Included(b.clone().into()),
+                Bound::Excluded(b) => Bound::Excluded(b.clone().into()),
                 Bound::Unbounded => Bound::Unbounded,
             }
         }
@@ -177,7 +180,10 @@ where
     /// # }
     /// ```
     #[doc(alias = "hb_set_add_range")]
-    pub fn insert_range(&mut self, range: impl RangeBounds<T>) {
+    pub fn insert_range(&mut self, range: impl RangeBounds<T>)
+    where
+        T: Clone + 'static,
+    {
         let Some((lower, upper)) = Self::range_to_bounds(range) else {
             return;
         };
@@ -186,7 +192,10 @@ where
 
     /// Removes a range of values from set.
     #[doc(alias = "hb_set_del_range")]
-    pub fn remove_range(&mut self, range: impl RangeBounds<T>) {
+    pub fn remove_range(&mut self, range: impl RangeBounds<T>)
+    where
+        T: Clone + 'static,
+    {
         // TODO: Assert that sys::HB_SET_VALUE_INVALID is u32::MAX like it should be
         #[allow(clippy::assertions_on_constants, clippy::absurd_extreme_comparisons)]
         const _: () = assert!(u32::MAX <= sys::HB_SET_VALUE_INVALID);
@@ -268,12 +277,24 @@ where
     }
 }
 
+impl<'a, T> FromIterator<T> for Set<'a, T>
+where
+    T: Into<u32>,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut set = Set::new().unwrap();
+        for item in iter {
+            set.insert(item);
+        }
+        set
+    }
+}
+
 impl<'s, 'a, T> IntoIterator for &'s Set<'a, T>
 where
     T: TryFrom<u32>,
 {
     type Item = T;
-
     type IntoIter = SetIter<'s, 'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
