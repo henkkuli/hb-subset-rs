@@ -1,6 +1,6 @@
 use std::{ffi::c_char, marker::PhantomData, ops::Deref, ptr::null_mut};
 
-use crate::{sys, AllocationError, Blob, CharSet, FontFaceExtractionError, Language};
+use crate::{sys, AllocationError, Blob, CharSet, FontFaceExtractionError, Language, Map};
 
 /// A font face is an object that represents a single face from within a font family.
 ///
@@ -52,10 +52,20 @@ impl<'a> FontFace<'a> {
 
     /// Collects all of the Unicode characters covered by the font face.
     #[doc(alias = "hb_face_collect_unicodes")]
-    pub fn collect_unicodes(&self) -> Result<CharSet, AllocationError> {
+    pub fn covered_codepoints(&self) -> Result<CharSet, AllocationError> {
         let set = CharSet::new()?;
         unsafe { sys::hb_face_collect_unicodes(self.as_raw(), set.as_raw()) };
         Ok(set)
+    }
+
+    /// Collects the mapping from Unicode characters to nominal glyphs of the face.
+    #[doc(alias = "hb_face_collect_nominal_glyph_mapping")]
+    pub fn nominal_glyph_mapping(&self) -> Result<Map<'static, char, u32>, AllocationError> {
+        let map = Map::new()?;
+        unsafe {
+            sys::hb_face_collect_nominal_glyph_mapping(self.as_raw(), map.as_raw(), null_mut())
+        };
+        Ok(map)
     }
 
     /// Preprocesses the face and attaches data that will be needed by the subsetter.
@@ -557,7 +567,7 @@ mod tests {
     #[test]
     fn loaded_font_contains_correct_number_of_codepoints_and_glyphs() {
         let font_face = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
-        assert_eq!(font_face.collect_unicodes().unwrap().len(), 3094);
+        assert_eq!(font_face.covered_codepoints().unwrap().len(), 3094);
         assert_eq!(font_face.glyph_count(), 4671);
     }
 
@@ -566,6 +576,20 @@ mod tests {
         let blob = Blob::from_file(NOTO_SANS).unwrap();
         let font_face = FontFace::new(blob.clone()).unwrap();
         assert_eq!(&*font_face.underlying_blob(), &*blob);
+    }
+
+    #[test]
+    fn nominal_glyph_mapping_works() {
+        let font_face = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
+        let map = font_face.nominal_glyph_mapping().unwrap();
+        assert_eq!(map.get('a').unwrap(), 68);
+        assert_eq!(map.get('b').unwrap(), 69);
+        assert_eq!(map.get('c').unwrap(), 70);
+        assert_eq!(map.get('d').unwrap(), 71);
+        assert_eq!(map.get('e').unwrap(), 72);
+        assert_eq!(map.get('f').unwrap(), 73);
+        assert_eq!(map.get('i').unwrap(), 76);
+        assert_eq!(map.get('ﬃ').unwrap(), 1656);
     }
 
     #[test]

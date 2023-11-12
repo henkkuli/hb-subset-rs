@@ -371,36 +371,65 @@ mod tests {
         let orig = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
         let new = subset.subset_font(&orig).unwrap();
         assert_eq!(
-            orig.collect_unicodes().unwrap().len(),
-            new.collect_unicodes().unwrap().len()
+            orig.covered_codepoints().unwrap().len(),
+            new.covered_codepoints().unwrap().len()
         );
         assert_eq!(orig.glyph_count(), new.glyph_count());
     }
 
     #[test]
     fn keeping_codepoints_should_keep_ligatures() {
+        let font = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
         let mut subset = SubsetInput::new().unwrap();
         subset.unicode_set().insert('f');
         subset.unicode_set().insert('i');
-        let font = subset
-            .subset_font(&FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap())
-            .unwrap();
-        assert_eq!(font.collect_unicodes().unwrap().len(), 2);
+        let font = subset.subset_font(&font).unwrap();
+        assert_eq!(font.covered_codepoints().unwrap().len(), 2);
         assert_eq!(font.glyph_count(), 6); // TODO: Actually check *which* glyphs are included
                                            // Currently just assuming [empty], f, i, ﬁ, ﬃ, and ﬀ
     }
 
     #[test]
-    #[ignore]
     fn old_to_new_glyph_mapping() {
-        todo!()
+        let font = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
+        let char_to_glyph = font.nominal_glyph_mapping().unwrap();
+
+        // Map 'a' and 'b' to arbitrary glyphs
+        let mut subset = SubsetInput::new().unwrap();
+        subset
+            .old_to_new_glyph_mapping()
+            .insert(char_to_glyph.get('a').unwrap(), 5);
+        subset
+            .old_to_new_glyph_mapping()
+            .insert(char_to_glyph.get('b').unwrap(), 709);
+        subset.unicode_set().insert('a');
+        subset.unicode_set().insert('b');
+
+        let font = subset.subset_font(&font).unwrap();
+        // Most of the glyphs should be empty
+        assert_eq!(font.glyph_count(), 710);
+
+        let char_to_glyph = font.nominal_glyph_mapping().unwrap();
+        // But the specified ones should be what we set
+        assert_eq!(char_to_glyph.get('a').unwrap(), 5);
+        assert_eq!(char_to_glyph.get('b').unwrap(), 709);
     }
 
     #[test]
-    fn convert_into_raw_and_back() {
+    fn convert_subset_into_raw_and_back() {
         let subset = SubsetInput::new().unwrap();
         let subset_ptr = subset.into_raw();
         let subset = unsafe { SubsetInput::from_raw(subset_ptr) };
         drop(subset);
+    }
+
+    #[test]
+    fn convert_plan_into_raw_and_back() {
+        let font = FontFace::new(Blob::from_file(NOTO_SANS).unwrap()).unwrap();
+        let subset = SubsetInput::new().unwrap();
+        let plan = subset.plan(&font).unwrap();
+        let plan_ptr = plan.into_raw();
+        let plan = unsafe { SubsetPlan::from_raw(plan_ptr) };
+        drop(plan);
     }
 }
