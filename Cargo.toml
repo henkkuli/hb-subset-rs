@@ -31,3 +31,7 @@ bundled = []
 
 [package.metadata.docs.rs]
 features = ["bundled"]
+
+[profile.test]
+opt-level = 1
+

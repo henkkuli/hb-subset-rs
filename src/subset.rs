@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ptr::null_mut};
 
 use crate::{sys, AllocationError, CharSet, FontFace, Map, Set, SubsettingError, TagSet, U32Set};
 
@@ -305,9 +305,9 @@ impl<'f, 'b> SubsetPlan<'f, 'b> {
     /// This method transfers the ownership of the subset plan to the caller. It is up to the caller to call
     /// [`sys::hb_subset_plan_destroy`] to free the pointer, or call [`Self::from_raw`] to convert it back into
     /// [`SubsetPlan`].
-    pub fn into_raw(self) -> *mut sys::hb_subset_plan_t {
+    pub fn into_raw(mut self) -> *mut sys::hb_subset_plan_t {
         let ptr = self.plan;
-        std::mem::forget(self);
+        self.plan = null_mut();
         ptr
     }
 
@@ -353,7 +353,9 @@ impl<'f, 'b> SubsetPlan<'f, 'b> {
 impl<'f, 'b> Drop for SubsetPlan<'f, 'b> {
     #[doc(alias = "hb_subset_plan_destroy")]
     fn drop(&mut self) {
-        unsafe { sys::hb_subset_plan_destroy(self.plan) }
+        if !self.plan.is_null() {
+            unsafe { sys::hb_subset_plan_destroy(self.plan) }
+        }
     }
 }
 

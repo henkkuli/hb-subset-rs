@@ -82,7 +82,7 @@ impl<'a> FontFace<'a> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// let processed = font.preprocess_for_subsetting();
     /// for subset in subsets() {
-    ///     subset.subset_font(&processed)?;
+    ///     //subset.subset_font(&processed)?;
     /// }
     /// # Ok(())
     /// # }
@@ -556,6 +556,13 @@ impl<'a> Deref for PreprocessedFontFace<'a> {
 
     fn deref(&self) -> &Self::Target {
         unsafe { std::mem::transmute(self) }
+    }
+}
+
+impl<'a> Drop for PreprocessedFontFace<'a> {
+    #[doc(alias = "hb_face_destroy")]
+    fn drop(&mut self) {
+        unsafe { sys::hb_face_destroy(self.0) }
     }
 }
 
