@@ -55,7 +55,7 @@ jobs:
     continue-on-error: ${{ matrix.allow_fail }}
     steps:
     - name: Install llvm-symbolizer
-      run: apt install llvm
+      run: sudo apt-get install -y llvm
     - uses: actions/checkout@v3
       with:
         submodules: recursive
