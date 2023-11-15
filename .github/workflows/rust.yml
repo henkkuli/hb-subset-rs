@@ -47,7 +47,6 @@ jobs:
             sanitizer: memory
             allow_fail: true
     env:
-      DEBUG: "1"
       RUSTC_BOOTSTRAP: "1"
       CXX: "${{ matrix.compiler }}"
       CXXFLAGS: "-fsanitize=${{ matrix.sanitizer }} -g"
@@ -55,6 +54,8 @@ jobs:
       RUSTDOCFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
     continue-on-error: ${{ matrix.allow_fail }}
     steps:
+    - name: Install llvm-symbolizer
+      run: apt install llvm
     - uses: actions/checkout@v3
       with:
         submodules: recursive
