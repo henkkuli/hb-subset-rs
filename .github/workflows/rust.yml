@@ -31,3 +31,18 @@ jobs:
       run: cargo build --features bundled --verbose
     - name: Run tests
       run: cargo test --features bundled --verbose
+
+  sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Run tests with address sanitizer
+      run: cargo build --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose
+      env:
+        RUSTC_BOOTSTRAP: 1
+        CXXFLAGS: "-fsanitize=address -g"
+        RUSTFLAGS: "-Zsanitizer=address"
+        RUSTDOCFLAGS: "-Zsanitizer=address"
+    
