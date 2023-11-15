@@ -559,12 +559,12 @@ impl<'a> Deref for PreprocessedFontFace<'a> {
     }
 }
 
-// impl<'a> Drop for PreprocessedFontFace<'a> {
-//     #[doc(alias = "hb_face_destroy")]
-//     fn drop(&mut self) {
-//         unsafe { sys::hb_face_destroy(self.0) }
-//     }
-// }
+impl<'a> Drop for PreprocessedFontFace<'a> {
+    #[doc(alias = "hb_face_destroy")]
+    fn drop(&mut self) {
+        unsafe { sys::hb_face_destroy(self.0) }
+    }
+}
 
 #[cfg(test)]
 mod tests {
