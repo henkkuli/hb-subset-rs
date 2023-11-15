@@ -36,12 +36,18 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        compiler:
+          - g++
+          - clang++
         sanitizer:
           - address
           - memory
+        exclude:
+          - compiler: g++
+            sanitizer: memory
     env:
       RUSTC_BOOTSTRAP: "1"
-      CXX: "clang++"
+      CXX: "${{ matrix.compiler }}"
       CXXFLAGS: "-fsanitize=${{ matrix.sanitizer }} -g"
       RUSTFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
       RUSTDOCFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
@@ -51,9 +57,9 @@ jobs:
         submodules: recursive
     - name: Install Rust source code
       run: rustup component add rust-src --toolchain stable-x86_64-unknown-linux-gnu
-    - name: Build
-      run: cargo build --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose
+    - name: Build tests with ${{ matrix.compiler }}
+      run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose --no-run
     - name: Run tests with ${{ matrix.sanitizer }} sanitizer
-      run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose
+      run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose --no-fail-fast
       
     
