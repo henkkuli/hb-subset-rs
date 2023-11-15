@@ -41,15 +41,11 @@ jobs:
           - clang++
         sanitizer:
           - address
-          - memory
         allow_fail: [false]
         include:
           - compiler: clang++
             sanitizer: memory
             allow_fail: true
-        exclude:
-          - compiler: g++
-            sanitizer: memory
     env:
       DEBUG: "1"
       RUSTC_BOOTSTRAP: "1"
