@@ -40,7 +40,8 @@ jobs:
           - address
           - memory
     env:
-      RUSTC_BOOTSTRAP: 1
+      RUSTC_BOOTSTRAP: "1"
+      CXX: "clang++"
       CXXFLAGS: "-fsanitize=${{ matrix.sanitizer }} -g"
       RUSTFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
       RUSTDOCFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
