@@ -82,7 +82,7 @@ impl<'a> FontFace<'a> {
     /// let font = FontFace::new(Blob::from_file("tests/fonts/NotoSans.ttf")?)?;
     /// let processed = font.preprocess_for_subsetting();
     /// for subset in subsets() {
-    ///     //subset.subset_font(&processed)?;
+    ///     subset.subset_font(&processed)?;
     /// }
     /// # Ok(())
     /// # }

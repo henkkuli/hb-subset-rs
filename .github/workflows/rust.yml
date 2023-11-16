@@ -65,5 +65,3 @@ jobs:
       run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose --no-run
     - name: Run tests with ${{ matrix.sanitizer }} sanitizer
       run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose --no-fail-fast
-      
-    
