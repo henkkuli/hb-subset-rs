@@ -41,6 +41,7 @@ jobs:
           - clang++
         sanitizer:
           - address
+          - leak
         allow_fail: [false]
         include:
           - compiler: clang++
