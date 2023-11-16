@@ -31,3 +31,38 @@ jobs:
       run: cargo build --features bundled --verbose
     - name: Run tests
       run: cargo test --features bundled --verbose
+
+  sanitizer:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler:
+          - g++
+          - clang++
+        sanitizer:
+          - address
+          - leak
+        allow_fail: [false]
+        include:
+          - compiler: clang++
+            sanitizer: memory
+            allow_fail: true
+    env:
+      RUSTC_BOOTSTRAP: "1"
+      CXX: "${{ matrix.compiler }}"
+      CXXFLAGS: "-fsanitize=${{ matrix.sanitizer }} -g"
+      RUSTFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
+      RUSTDOCFLAGS: "-Zsanitizer=${{ matrix.sanitizer }}"
+    continue-on-error: ${{ matrix.allow_fail }}
+    steps:
+    - name: Install llvm-symbolizer
+      run: sudo apt-get install -y llvm
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Install Rust source code
+      run: rustup component add rust-src --toolchain stable-x86_64-unknown-linux-gnu
+    - name: Build tests with ${{ matrix.compiler }}
+      run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose --no-run
+    - name: Run tests with ${{ matrix.sanitizer }} sanitizer
+      run: cargo test --features bundled -Zbuild-std --target x86_64-unknown-linux-gnu --verbose --no-fail-fast
