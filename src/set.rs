@@ -1,3 +1,12 @@
+//! Set represents a mathematical set of integer values.
+//!
+//! While set in this module can be used as a general-purpose set in Rust code, it is recommended that you instead use
+//! [`std::collections::BTreeSet`] or [`std::collections::HashSet`] as those are implemented directly in Rust and do not
+//! rely on FFI to work.
+//!
+//! Sets are used in HarfBuzz in some non-shaping APIs to query certain sets of characters or glyphs, or other integer
+//! values.
+
 use std::{
     any::TypeId,
     fmt,
@@ -10,8 +19,6 @@ use std::{
 use crate::{sys, AllocationError, Tag};
 
 /// Set objects represent a mathematical set of integer values.
-///
-/// Sets are used in non-shaping APIs to query certain sets of characters or glyphs, or other integer values.
 pub struct Set<'a, T>(InnerSet, PhantomData<(&'a (), T)>);
 
 impl<T> Set<'static, T> {
@@ -39,7 +46,7 @@ impl<'a, T> Set<'a, T> {
     /// elements that can be represented as `T`. This is especially evident when the set is over [`char`]s and invalid
     /// code points have been added with [`Self::insert_range`].
     /// ```
-    /// # use hb_subset::CharSet;
+    /// # use hb_subset::set::CharSet;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut set = CharSet::new()?;
     /// set.insert_range('\u{D7FF}'..'\u{E000}'); // Add all surrogate pairs (and \u{D7FF} for technical reasons)
@@ -164,7 +171,7 @@ where
     ///
     /// Will panic if `range` explicitly contains [`sys::HB_SET_VALUE_INVALID`]:
     /// ```should_panic
-    /// # use hb_subset::U32Set;
+    /// # use hb_subset::set::U32Set;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// U32Set::new()?.insert_range(u32::MAX-10..=u32::MAX);
     /// # Ok(())
@@ -172,7 +179,7 @@ where
     /// ```
     /// These still work:
     /// ```
-    /// # use hb_subset::U32Set;
+    /// # use hb_subset::set::U32Set;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// U32Set::new()?.insert_range(u32::MAX-10..);
     /// U32Set::new()?.insert_range(u32::MAX-10..u32::MAX);
@@ -213,8 +220,8 @@ where
     /// Constructs an iterator over the set.
     #[doc(alias = "hb_set_next")]
     #[doc(alias = "hb_set_previous")]
-    pub fn iter(&self) -> SetIter<'_, 'a, T> {
-        SetIter(SetIterImpl::new(self).filter_map(|v| v.try_into().ok()))
+    pub fn iter(&self) -> Iter<'_, 'a, T> {
+        Iter(IterImpl::new(self).filter_map(|v| v.try_into().ok()))
     }
 }
 
@@ -295,7 +302,7 @@ where
     T: TryFrom<u32>,
 {
     type Item = T;
-    type IntoIter = SetIter<'s, 'a, T>;
+    type IntoIter = Iter<'s, 'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -304,11 +311,11 @@ where
 
 /// Iterator over [`Set`].
 ///
-/// Use [`Set::iter`] to construct a [`SetIter`].
-pub struct SetIter<'s, 'a, T>(SetIterFilter<'s, 'a, T>);
-type SetIterFilter<'s, 'a, T> = FilterMap<SetIterImpl<'s, 'a, T>, fn(u32) -> Option<T>>;
+/// Use [`Set::iter`] to construct a [`Iter`].
+pub struct Iter<'s, 'a, T>(IterFilter<'s, 'a, T>);
+type IterFilter<'s, 'a, T> = FilterMap<IterImpl<'s, 'a, T>, fn(u32) -> Option<T>>;
 
-impl<'s, 'a, T> Iterator for SetIter<'s, 'a, T>
+impl<'s, 'a, T> Iterator for Iter<'s, 'a, T>
 where
     T: TryFrom<u32>,
 {
@@ -319,7 +326,7 @@ where
     }
 }
 
-impl<'s, 'a, T> DoubleEndedIterator for SetIter<'s, 'a, T>
+impl<'s, 'a, T> DoubleEndedIterator for Iter<'s, 'a, T>
 where
     T: TryFrom<u32>,
 {
@@ -328,15 +335,15 @@ where
     }
 }
 
-impl<'s, 'a, T> FusedIterator for SetIter<'s, 'a, T> where T: TryFrom<u32> {}
+impl<'s, 'a, T> FusedIterator for Iter<'s, 'a, T> where T: TryFrom<u32> {}
 
-/// Actual implementation for [`SetIter`].
+/// Actual implementation for [`Iter`].
 ///
 /// This implementation does not care whether the target type can or cannot represent the target type. It just returns
-/// [`u32`], no matter what. [`SetIter`] is responsible to then filter out invalid values.
-struct SetIterImpl<'s, 'a, T>(&'s Set<'a, T>, u32, u32);
+/// [`u32`], no matter what. [`Iter`] is responsible to then filter out invalid values.
+struct IterImpl<'s, 'a, T>(&'s Set<'a, T>, u32, u32);
 
-impl<'s, 'a, T> SetIterImpl<'s, 'a, T> {
+impl<'s, 'a, T> IterImpl<'s, 'a, T> {
     const LAST_VALUE: u32 = sys::HB_SET_VALUE_INVALID - 1;
     fn new(set: &'s Set<'a, T>) -> Self {
         #[allow(clippy::assertions_on_constants, clippy::absurd_extreme_comparisons)]
@@ -350,7 +357,7 @@ impl<'s, 'a, T> SetIterImpl<'s, 'a, T> {
     }
 }
 
-impl<'s, 'a, T> Iterator for SetIterImpl<'s, 'a, T> {
+impl<'s, 'a, T> Iterator for IterImpl<'s, 'a, T> {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -378,7 +385,7 @@ impl<'s, 'a, T> Iterator for SetIterImpl<'s, 'a, T> {
     }
 }
 
-impl<'s, 'a, T> DoubleEndedIterator for SetIterImpl<'s, 'a, T> {
+impl<'s, 'a, T> DoubleEndedIterator for IterImpl<'s, 'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.2 {
             0 => {

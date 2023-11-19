@@ -1,6 +1,10 @@
 use std::{marker::PhantomData, ptr::null_mut};
 
-use crate::{sys, AllocationError, CharSet, FontFace, Map, Set, SubsettingError, TagSet, U32Set};
+use crate::{
+    map::Map,
+    set::{CharSet, Set, TagSet, U32Set},
+    sys, AllocationError, FontFace, SubsettingError,
+};
 
 mod flags;
 

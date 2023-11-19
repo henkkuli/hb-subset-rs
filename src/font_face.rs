@@ -1,6 +1,8 @@
 use std::{ffi::c_char, marker::PhantomData, ops::Deref, ptr::null_mut};
 
-use crate::{sys, AllocationError, Blob, CharSet, FontFaceExtractionError, Language, Map};
+use crate::{
+    map::Map, set::CharSet, sys, AllocationError, Blob, FontFaceExtractionError, Language,
+};
 
 /// A font face is an object that represents a single face from within a font family.
 ///

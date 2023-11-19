@@ -17,13 +17,13 @@
 //! In other words, subsetting allows you to take a large font and construct a new, smaller font which has only those
 //! characters that you need. Be sure to check the license of the font though, as not all fonts can be legally
 //! subsetted.
-//! 
+//!
 //! # Why?
 //! Many modern fonts can contain hundreds or even thousands of glyphs, of which only a couple dozen or maybe hundred is
 //! needed in any single document. This also means that modern fonts can be very bulky compared to what is actually
 //! needed. The solution to this is font subsetting: We can construct a font that includes only those glyphs and
 //! features that are needed for the document.
-//! 
+//!
 //! # Usage
 //! The simplest way to construct a subset of a font is to use [`subset()`] function. In the following example, we keep
 //! only glyphs that are needed show any combination of characters 'a', 'b' and 'c', e.g. "abc" and "cabba" can be
@@ -59,7 +59,7 @@
 //! # Ok(())
 //! # }
 //! ```
-//! 
+//!
 //! # Using bundled version of HarfBuzz
 //! By default, this crate uses the system HarfBuzz installation. If it is not available, or it is too old, this crate
 //! can also used a bundled copy of HarfBuzz by using feature `bundled`:
@@ -73,8 +73,8 @@ mod blob;
 mod common;
 mod error;
 mod font_face;
-mod map;
-mod set;
+pub mod map;
+pub mod set;
 mod subset;
 
 pub mod sys;
@@ -83,8 +83,6 @@ pub use blob::*;
 pub use common::*;
 pub use error::*;
 pub use font_face::*;
-pub use map::*;
-pub use set::*;
 pub use subset::*;
 
 /// A convenient method to create a subset of a font over given characters.

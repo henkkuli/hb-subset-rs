@@ -1,3 +1,9 @@
+//! Map represents an integer-to-integer mapping.
+//!
+//! While map in this module can be used as a general-purpose map in Rust code, it is recommended that you instead use
+//! [`std::collections::BTreeMap`] or [`std::collections::HashMap`] as those are implemented directly in Rust and do not
+//! rely on FFI to work.
+
 use std::{
     fmt,
     hash::Hash,
@@ -5,7 +11,7 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::{sys, AllocationError, Set};
+use crate::{set::Set, sys, AllocationError};
 
 /// Map objects are integer-to-integer hash-maps.
 ///
@@ -124,10 +130,9 @@ where
 {
     /// Gets an iterator over key-value pairs stored in the map.
     #[doc(alias = "hb_map_next")]
-    pub fn iter(&self) -> MapIter<'_, 'a, K, V> {
-        MapIter(
-            MapIterImpl::new(self)
-                .filter_map(|(k, v)| Some((k.try_into().ok()?, v.try_into().ok()?))),
+    pub fn iter(&self) -> Iter<'_, 'a, K, V> {
+        Iter(
+            IterImpl::new(self).filter_map(|(k, v)| Some((k.try_into().ok()?, v.try_into().ok()?))),
         )
     }
 }
@@ -217,7 +222,7 @@ where
     V: TryFrom<u32>,
 {
     type Item = (K, V);
-    type IntoIter = MapIter<'m, 'a, K, V>;
+    type IntoIter = Iter<'m, 'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -226,12 +231,11 @@ where
 
 /// Iterator over [`Map`] key-value pairs.
 ///
-/// Use [`Map::iter`] to construct [`MapIter`].
-pub struct MapIter<'m, 'a, K, V>(MapIterFilter<'m, 'a, K, V>);
-type MapIterFilter<'m, 'a, K, V> =
-    FilterMap<MapIterImpl<'m, 'a, K, V>, fn((u32, u32)) -> Option<(K, V)>>;
+/// Use [`Map::iter`] to construct [`Iter`].
+pub struct Iter<'m, 'a, K, V>(IterFilter<'m, 'a, K, V>);
+type IterFilter<'m, 'a, K, V> = FilterMap<IterImpl<'m, 'a, K, V>, fn((u32, u32)) -> Option<(K, V)>>;
 
-impl<'m, 'a, K, V> Iterator for MapIter<'m, 'a, K, V>
+impl<'m, 'a, K, V> Iterator for Iter<'m, 'a, K, V>
 where
     K: TryFrom<u32>,
     V: TryFrom<u32>,
@@ -243,7 +247,7 @@ where
     }
 }
 
-impl<'m, 'a, K, V> FusedIterator for MapIter<'m, 'a, K, V>
+impl<'m, 'a, K, V> FusedIterator for Iter<'m, 'a, K, V>
 where
     K: TryFrom<u32>,
     V: TryFrom<u32>,
@@ -251,15 +255,15 @@ where
 }
 
 /// Iterator over raw elements over map, disregarding whether they can be represented as (K, V).
-struct MapIterImpl<'m, 'a, K, V>(&'m Map<'a, K, V>, i32);
+struct IterImpl<'m, 'a, K, V>(&'m Map<'a, K, V>, i32);
 
-impl<'m, 'a, K, V> MapIterImpl<'m, 'a, K, V> {
+impl<'m, 'a, K, V> IterImpl<'m, 'a, K, V> {
     fn new(map: &'m Map<'a, K, V>) -> Self {
         Self(map, -1)
     }
 }
 
-impl<'m, 'a, K, V> Iterator for MapIterImpl<'m, 'a, K, V> {
+impl<'m, 'a, K, V> Iterator for IterImpl<'m, 'a, K, V> {
     type Item = (u32, u32);
 
     fn next(&mut self) -> Option<Self::Item> {
